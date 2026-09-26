@@ -4,7 +4,12 @@
  * memory stays at a single decoded bitmap regardless of how many cards are queued.
  */
 import { PDFDocument } from './vendor/pdf-lib.esm.min.js';
-import { DEFAULT_TARGET, PAGE_SIZE_PT, cardPlacementPt } from './geometry.js';
+import {
+  DEFAULT_TARGET,
+  PAGE_SIZE_PT,
+  cardPlacementPt,
+  effectivePaddingMm,
+} from './geometry.js';
 import { renderCardJpeg } from './image-process.js';
 
 /**
@@ -23,6 +28,7 @@ export async function buildPdf(
 
   const pdf = await PDFDocument.create();
   const canvas = document.createElement('canvas');
+  const cropMm = effectivePaddingMm(target, paddingMm);
 
   let downscaled = 0;
   try {
@@ -31,7 +37,7 @@ export async function buildPdf(
       let bitmap = null;
       try {
         bitmap = await createImageBitmap(item.blob);
-        const card = await renderCardJpeg(bitmap, paddingMm, cornerMm, canvas);
+        const card = await renderCardJpeg(bitmap, cropMm, cornerMm, canvas);
         if (card.scaled) downscaled += 1;
         const image = await pdf.embedJpg(new Uint8Array(await card.blob.arrayBuffer()));
         const page = pdf.addPage([PAGE_SIZE_PT, PAGE_SIZE_PT]);

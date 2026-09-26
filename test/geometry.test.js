@@ -16,6 +16,9 @@ import {
   CARD_MM,
   CORNER_RADIUS_BASE_MM,
   DEFAULT_TARGET,
+  LINUX_BORDER_MM,
+  LINUX_LIFT_MM,
+  LINUX_SIZE_CORRECTION,
   OVERSCAN,
   PAGE_MM,
   PT_PER_MM,
@@ -37,6 +40,7 @@ import {
   clampPaddingDelta,
   cornerRadiusPx,
   cropRect,
+  effectivePaddingMm,
   limitError,
   mm2inch,
   mm2pixel,
@@ -229,25 +233,38 @@ describe('output targets', () => {
   });
 
   describe('Linux (borderless overscan)', () => {
-    it('draws the card pre-shrunk by OVERSCAN', () => {
+    it('shrinks by OVERSCAN and the 835/818 size correction', () => {
       const { width, height } = overscanPlacementPt();
-      expect(mm(width)).toBeCloseTo(CARD_MM.width / OVERSCAN, 9);
-      expect(mm(height)).toBeCloseTo(CARD_MM.height / OVERSCAN, 9);
-      // Stated control values; the formula and the quoted decimals differ by ~2um.
-      expect(mm(width)).toBeCloseTo(60.28786, 2);
-      expect(mm(height)).toBeCloseTo(84.40301, 2);
-      expect(width).toBeCloseTo(170.895, 1);
-      expect(height).toBeCloseTo(239.253, 1);
+      const divisor = OVERSCAN * LINUX_SIZE_CORRECTION;
+      expect(LINUX_SIZE_CORRECTION).toBeCloseTo(835 / 818, 12);
+      expect(mm(width)).toBeCloseTo(CARD_MM.width / divisor, 9);
+      expect(mm(height)).toBeCloseTo(CARD_MM.height / divisor, 9);
+      expect(mm(width)).toBeCloseTo(59.0593, 3);
+      expect(mm(height)).toBeCloseTo(82.6831, 3);
     });
 
-    it('centres the card exactly, so the bleed is eaten symmetrically', () => {
+    it('is smaller than overscan alone would make it', () => {
+      const { width, height } = overscanPlacementPt();
+      expect(mm(width)).toBeLessThan(CARD_MM.width / OVERSCAN);
+      expect(mm(height)).toBeLessThan(CARD_MM.height / OVERSCAN);
+      // Exactly the 835/818 ratio smaller.
+      expect(mm(width) * LINUX_SIZE_CORRECTION).toBeCloseTo(CARD_MM.width / OVERSCAN, 9);
+    });
+
+    it('centres horizontally and lifts the centre by 1.3mm', () => {
       const { x, y, width, height } = overscanPlacementPt();
       const page = PAGE_MM * PT_PER_MM;
-      expect(mm(x)).toBeCloseTo(14.30607, 2);
-      expect(mm(y)).toBeCloseTo(2.24850, 2);
-      // Left margin equals right margin, top equals bottom.
+      expect(LINUX_LIFT_MM).toBe(1.3);
+      // Left margin still equals right margin.
       expect(x).toBeCloseTo(page - x - width, 9);
-      expect(y).toBeCloseTo(page - y - height, 9);
+      expect(mm(x)).toBeCloseTo(14.9203, 3);
+      // Vertically the card centre sits 1.3mm above the page centre.
+      expect(mm(y + height / 2)).toBeCloseTo(PAGE_MM / 2 + LINUX_LIFT_MM, 9);
+      expect(mm(y + height / 2)).toBeCloseTo(45.75, 6);
+      // So the top margin is 2.6mm smaller than the bottom one.
+      expect(mm(page - y - height)).toBeCloseTo(1.8085, 3);
+      expect(mm(y)).toBeCloseTo(4.4085, 3);
+      expect(mm(y) - mm(page - y - height)).toBeCloseTo(2 * LINUX_LIFT_MM, 9);
     });
 
     it('ignores the source aspect ratio (preserveAspectRatio=False)', () => {
@@ -296,5 +313,31 @@ describe('output targets', () => {
     expect(linux.width).toBeLessThan(windows.width);
     expect(linux.height).toBeLessThan(windows.height);
     expect(linux.y).toBeGreaterThan(windows.y); // pdf-lib y grows upwards
+  });
+});
+
+describe('effectivePaddingMm', () => {
+  it('crops 0.7mm less on Linux, leaving that much extra black border', () => {
+    expect(LINUX_BORDER_MM).toBe(0.7);
+    expect(effectivePaddingMm(TARGET_LINUX, PADDING_BASE_MM)).toBeCloseTo(2.1, 9);
+    expect(effectivePaddingMm(TARGET_LINUX, 5)).toBeCloseTo(4.3, 9);
+  });
+
+  it('leaves the Windows target alone', () => {
+    expect(effectivePaddingMm(TARGET_WINDOWS, PADDING_BASE_MM)).toBe(PADDING_BASE_MM);
+    expect(effectivePaddingMm(TARGET_WINDOWS, 0)).toBe(0);
+  });
+
+  it('never returns a negative crop, which would grow the frame', () => {
+    expect(effectivePaddingMm(TARGET_LINUX, 0)).toBe(0);
+    expect(effectivePaddingMm(TARGET_LINUX, 0.3)).toBe(0);
+  });
+
+  it('keeps more pixels than the requested padding would', () => {
+    const asked = cropRect(2187, 2975, PADDING_BASE_MM);
+    const linux = cropRect(2187, 2975, effectivePaddingMm(TARGET_LINUX, PADDING_BASE_MM));
+    expect(linux.sw).toBeGreaterThan(asked.sw);
+    expect(linux.sh).toBeGreaterThan(asked.sh);
+    expect(linux.sx).toBeLessThan(asked.sx);
   });
 });

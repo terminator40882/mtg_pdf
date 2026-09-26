@@ -6,9 +6,16 @@ import { fileURLToPath } from 'node:url';
 import { dirname, resolve } from 'node:path';
 import { readFile } from 'node:fs/promises';
 import { expect, test } from '@playwright/test';
-import { PDFDocument } from 'pdf-lib';
+import { PDFDocument, PDFName } from 'pdf-lib';
 import { imageMatrix } from '../helpers/pdf-matrix.js';
 import { LINUX_PRINT_COMMAND } from '../../src/print-command.js';
+import {
+  PADDING_BASE_MM,
+  TARGET_LINUX,
+  TARGET_WINDOWS,
+  cropRect,
+  effectivePaddingMm,
+} from '../../src/geometry.js';
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 const CARD_A = resolve(HERE, '../fixtures/card-a.png');
@@ -22,6 +29,18 @@ function trackPageErrors(page) {
   });
   page.on('pageerror', (err) => errors.push(`pageerror: ${err.message}`));
   return errors;
+}
+
+/** Pixel dimensions of the first embedded image XObject. */
+function embeddedImageSize(pdf) {
+  for (const [, obj] of pdf.context.enumerateIndirectObjects()) {
+    const dict = obj?.dict;
+    if (!dict?.get) continue;
+    const width = dict.get(PDFName.of('Width'));
+    const height = dict.get(PDFName.of('Height'));
+    if (width && height) return [width.asNumber(), height.asNumber()];
+  }
+  throw new Error('no image XObject in the PDF');
 }
 
 /** Click Generate, capture the download and return the parsed PDF plus its bytes. */
@@ -186,15 +205,39 @@ test('defaults to the Linux target and centres the shrunk card', async ({ page }
   await page.setInputFiles('#fileInput', CARD_A);
   const { pdf } = await generateAndRead(page);
 
-  // 63.5mm / 1.0533 = 170.89pt wide, 88.9mm / 1.0533 = 239.25pt tall, centred on the
-  // 252pt page so the printer's borderless overscan eats the bleed symmetrically.
+  // 63.5mm and 88.9mm divided by OVERSCAN * 835/818, centred horizontally, with the
+  // card centre lifted 1.3mm above the page centre.
+  const PT_PER_MM = 72 / 25.4;
   const { width, height, x, y } = imageMatrix(pdf, 0);
-  expect(width).toBeCloseTo(170.891, 2);
-  expect(height).toBeCloseTo(239.248, 2);
-  expect(x).toBeCloseTo(40.554, 2);
-  expect(y).toBeCloseTo(6.376, 2);
+  expect(width / PT_PER_MM).toBeCloseTo(59.0593, 3);
+  expect(height / PT_PER_MM).toBeCloseTo(82.6831, 3);
+  expect(x / PT_PER_MM).toBeCloseTo(14.9203, 3);
+  expect(y / PT_PER_MM).toBeCloseTo(4.4085, 3);
   expect(x).toBeCloseTo(252 - x - width, 3); // symmetric left/right
-  expect(y).toBeCloseTo(252 - y - height, 3); // symmetric top/bottom
+  expect((y + height / 2) / PT_PER_MM).toBeCloseTo(88.9 / 2 + 1.3, 3); // lifted centre
+});
+
+test('the Linux target keeps 0.7mm more black border than Windows', async ({ page }) => {
+  // Cropping less leaves a larger source image, which is then stretched into the same
+  // fixed rectangle - so the extra black shows up as a border around the artwork.
+  await page.setInputFiles('#fileInput', CARD_A);
+  const linux = await generateAndRead(page);
+
+  await page.click('#targetBtn');
+  const windows = await generateAndRead(page);
+
+  // The embedded pixels must be exactly what cropRect says for each target's padding.
+  const expected = (target) => {
+    const { sw, sh } = cropRect(315, 440, effectivePaddingMm(target, PADDING_BASE_MM));
+    return [sw, sh];
+  };
+  expect(embeddedImageSize(linux.pdf)).toEqual(expected(TARGET_LINUX));
+  expect(embeddedImageSize(windows.pdf)).toEqual(expected(TARGET_WINDOWS));
+
+  const [lw, lh] = embeddedImageSize(linux.pdf);
+  const [ww, wh] = embeddedImageSize(windows.pdf);
+  expect(lw).toBeGreaterThan(ww);
+  expect(lh).toBeGreaterThan(wh);
 });
 
 test('the target button toggles back and forth', async ({ page }) => {

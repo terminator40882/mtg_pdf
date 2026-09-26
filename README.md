@@ -59,19 +59,29 @@ The button at the top of the page picks the page layout. The page is 88.9 × 88.
 (252 pt) either way, and the crop and corner rounding are identical — only the rectangle
 the card is drawn into changes.
 
-**Linux (default)** — for borderless printing. The card is pre-shrunk by the measured
-Canon G600 overscan factor (1.0533) so the printer blows it back up to a finished
-63.5 × 88.9 mm, and centred exactly so the bleed is eaten symmetrically. The image is
-stretched into that rectangle, ignoring its own aspect ratio.
+**Linux (default)** — for borderless printing. Four adjustments, all measured against
+real prints:
+
+- the card is pre-shrunk by the Canon G600 overscan factor (`OVERSCAN`, 1.0533) so the
+  printer blows it back up towards 63.5 × 88.9 mm,
+- and shrunk again by `LINUX_SIZE_CORRECTION` (835/818),
+- centred horizontally, with the card centre lifted `LINUX_LIFT_MM` (1.3 mm) above the
+  page centre — so the top margin ends up 2.6 mm smaller than the bottom one,
+- and cropped `LINUX_BORDER_MM` (0.7 mm) less than the padding control asks for, which
+  leaves that much extra black border on the card.
+
+The image is stretched into the rectangle, ignoring its own aspect ratio.
 
 **Windows** — the original fpdf2 layout, unchanged: full height, width following the
 cropped image's aspect ratio, flush with the top edge.
 
 | | Linux | Windows |
 | --- | --- | --- |
-| image rectangle | 60.287 × 84.401 mm | 63.189 × 88.098 mm |
-| margin left / right | 14.307 / 14.307 mm | 13.163 / 12.548 mm |
-| margin top / bottom | 2.249 / 2.249 mm | 0.000 / 0.802 mm |
+| image rectangle | 59.059 × 82.683 mm | 63.189 × 88.098 mm |
+| margin left / right | 14.920 / 14.920 mm | 13.163 / 12.548 mm |
+| margin top / bottom | 1.809 / 4.409 mm | 0.000 / 0.802 mm |
+| card centre | 45.750 mm (page centre + 1.3) | 44.851 mm |
+| effective crop padding | 2.1 mm | 2.8 mm |
 
 Those are measured off generated PDFs, not computed. The constants live in
 `src/geometry.js` (`OVERSCAN`, `CARD_MM`, `PAGE_MM`); switching the target discards any
@@ -80,8 +90,12 @@ setting, so "Generate another" leaves it alone.
 
 On the Linux target the page also shows the CUPS command at the bottom; a left click
 copies it, line continuations included. It lives in `src/print-command.js` — the one
-place to edit when the queue name or its options change. The filename is hard-coded
-because the browser always names the download `mtg_cards.pdf`.
+place to edit when the queue name or its options change. The path is hard-coded as
+`~/Downloads/mtg_cards.pdf`: the browser always names the download `mtg_cards.pdf`, so
+only the directory needs adjusting if it saves somewhere else.
+
+Note that the padding control still shows the value you set (2.8 by default); the 0.7 mm
+Linux reduction is applied on top of it when the PDF is built.
 
 ## Differences from the Flask version
 

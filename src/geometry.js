@@ -51,6 +51,12 @@ export const PAGE_MM = 88.9;
 export const CARD_MM = { width: 63.5, height: 88.9 };
 /** Measured borderless overscan of the Canon G600. */
 export const OVERSCAN = 1.0533;
+/** Measured size correction applied on top of OVERSCAN. */
+export const LINUX_SIZE_CORRECTION = 835 / 818;
+/** The card centre sits this far above the page centre. */
+export const LINUX_LIFT_MM = 1.3;
+/** Crop this much less than asked for, so more of the black border survives. */
+export const LINUX_BORDER_MM = 0.7;
 
 /** Drawn card height. Always BASE_HEIGHT_MM, independent of the source image. */
 export function cardHeightInch() {
@@ -111,10 +117,17 @@ export function cornerRadiusPx(imgHeightPx, cornerMm) {
  * what preserveAspectRatio=False / keep_proportion=False means in the reference code.
  */
 export function overscanPlacementPt() {
-  const width = (CARD_MM.width / OVERSCAN) * PT_PER_MM;
-  const height = (CARD_MM.height / OVERSCAN) * PT_PER_MM;
+  const divisor = OVERSCAN * LINUX_SIZE_CORRECTION;
+  const width = (CARD_MM.width / divisor) * PT_PER_MM;
+  const height = (CARD_MM.height / divisor) * PT_PER_MM;
   const page = PAGE_MM * PT_PER_MM;
-  return { x: (page - width) / 2, y: (page - height) / 2, width, height };
+  return {
+    x: (page - width) / 2,
+    // Centred, then lifted. pdf-lib's y grows upwards, so a positive offset moves up.
+    y: (page - height) / 2 + LINUX_LIFT_MM * PT_PER_MM,
+    width,
+    height,
+  };
 }
 
 /**
@@ -130,6 +143,15 @@ export function aspectPlacementPt(croppedW, croppedH) {
     width: cardWidthInch(croppedW, croppedH) * PT_PER_INCH,
     height,
   };
+}
+
+/**
+ * Padding actually cropped for a target. The Linux target takes LINUX_BORDER_MM less
+ * than asked for, leaving that much extra black border on the card. Never negative:
+ * a negative crop would grow the frame instead of shrinking it.
+ */
+export function effectivePaddingMm(target, paddingMm) {
+  return target === TARGET_LINUX ? Math.max(0, paddingMm - LINUX_BORDER_MM) : paddingMm;
 }
 
 /** Rectangle to draw the card into, in points, for the selected target. */
