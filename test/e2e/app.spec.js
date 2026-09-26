@@ -205,16 +205,21 @@ test('defaults to the Linux target and centres the shrunk card', async ({ page }
   await page.setInputFiles('#fileInput', CARD_A);
   const { pdf } = await generateAndRead(page);
 
-  // 63.5mm and 88.9mm divided by OVERSCAN * 835/818, centred horizontally, with the
-  // card centre lifted 1.3mm above the page centre.
+  // 88.9mm / (OVERSCAN * 835/818) + 0.6mm tall, width following the cropped image's
+  // aspect ratio, centred horizontally, card centre lifted 1.3mm above the page centre.
   const PT_PER_MM = 72 / 25.4;
   const { width, height, x, y } = imageMatrix(pdf, 0);
-  expect(width / PT_PER_MM).toBeCloseTo(59.0593, 3);
-  expect(height / PT_PER_MM).toBeCloseTo(82.6831, 3);
-  expect(x / PT_PER_MM).toBeCloseTo(14.9203, 3);
-  expect(y / PT_PER_MM).toBeCloseTo(4.4085, 3);
+  expect(height / PT_PER_MM).toBeCloseTo(83.2831, 3);
+  expect(width / PT_PER_MM).toBeCloseTo(58.4964, 3);
+  expect(x / PT_PER_MM).toBeCloseTo(15.2018, 3);
+  expect(y / PT_PER_MM).toBeCloseTo(4.1085, 3);
   expect(x).toBeCloseTo(252 - x - width, 3); // symmetric left/right
   expect((y + height / 2) / PT_PER_MM).toBeCloseTo(88.9 / 2 + 1.3, 3); // lifted centre
+
+  // 1:1 — the drawn rectangle must match the embedded image's aspect ratio exactly,
+  // otherwise the card is stretched.
+  const [pxW, pxH] = embeddedImageSize(pdf);
+  expect(width / height).toBeCloseTo(pxW / pxH, 6);
 });
 
 test('the Linux target keeps 0.7mm more black border than Windows', async ({ page }) => {

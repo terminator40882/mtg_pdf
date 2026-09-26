@@ -62,26 +62,33 @@ the card is drawn into changes.
 **Linux (default)** — for borderless printing. Four adjustments, all measured against
 real prints:
 
-- the card is pre-shrunk by the Canon G600 overscan factor (`OVERSCAN`, 1.0533) so the
-  printer blows it back up towards 63.5 × 88.9 mm,
-- and shrunk again by `LINUX_SIZE_CORRECTION` (835/818),
+- the height starts at `CARD_MM.height` (88.9 mm) shrunk by the Canon G600 overscan
+  factor (`OVERSCAN`, 1.0533) so the printer blows it back up,
+- shrunk again by `LINUX_SIZE_CORRECTION` (835/818),
+- then grown by `LINUX_SIZE_BOOST_MM` (0.6 mm),
 - centred horizontally, with the card centre lifted `LINUX_LIFT_MM` (1.3 mm) above the
   page centre — so the top margin ends up 2.6 mm smaller than the bottom one,
 - and cropped `LINUX_BORDER_MM` (0.7 mm) less than the padding control asks for, which
   leaves that much extra black border on the card.
 
-The image is stretched into the rectangle, ignoring its own aspect ratio.
+The width follows the cropped image's own aspect ratio, so the card is scaled 1:1 and
+never distorted. That makes the width scan-dependent: `CARD_MM.width` records the
+finished size a card is meant to have, but it no longer constrains the drawing.
 
 **Windows** — the original fpdf2 layout, unchanged: full height, width following the
 cropped image's aspect ratio, flush with the top edge.
 
 | | Linux | Windows |
 | --- | --- | --- |
-| image rectangle | 59.059 × 82.683 mm | 63.189 × 88.098 mm |
-| margin left / right | 14.920 / 14.920 mm | 13.163 / 12.548 mm |
-| margin top / bottom | 1.809 / 4.409 mm | 0.000 / 0.802 mm |
+| image rectangle | 60.134 × 83.283 mm | 63.189 × 88.098 mm |
+| margin left / right | 14.383 / 14.383 mm | 13.163 / 12.548 mm |
+| margin top / bottom | 1.509 / 4.109 mm | 0.000 / 0.802 mm |
 | card centre | 45.750 mm (page centre + 1.3) | 44.851 mm |
 | effective crop padding | 2.1 mm | 2.8 mm |
+| distortion | none (1:1) | none (1:1) |
+
+The height is fixed; the width in that table is what the 2187 × 2975 sample scan
+produces. A scan with a different aspect ratio gives a different width.
 
 Those are measured off generated PDFs, not computed. The constants live in
 `src/geometry.js` (`OVERSCAN`, `CARD_MM`, `PAGE_MM`); switching the target discards any

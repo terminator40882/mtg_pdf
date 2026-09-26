@@ -57,6 +57,8 @@ export const LINUX_SIZE_CORRECTION = 835 / 818;
 export const LINUX_LIFT_MM = 1.3;
 /** Crop this much less than asked for, so more of the black border survives. */
 export const LINUX_BORDER_MM = 0.7;
+/** Measured height correction, added after the divisors. */
+export const LINUX_SIZE_BOOST_MM = 0.6;
 
 /** Drawn card height. Always BASE_HEIGHT_MM, independent of the source image. */
 export function cardHeightInch() {
@@ -109,21 +111,24 @@ export function cornerRadiusPx(imgHeightPx, cornerMm) {
 }
 
 /**
- * Placement for TARGET_LINUX: shrink the card by OVERSCAN so the printer's borderless
- * overscan blows it back up to CARD_MM, and centre it exactly so the bleed is eaten
- * symmetrically on all four sides.
+ * Placement for TARGET_LINUX.
  *
- * The image is stretched into this rectangle - its own aspect ratio is ignored, which is
- * what preserveAspectRatio=False / keep_proportion=False means in the reference code.
+ * The height comes from CARD_MM.height shrunk by OVERSCAN (so the printer's borderless
+ * overscan blows it back up) and by LINUX_SIZE_CORRECTION, then grown by
+ * LINUX_SIZE_BOOST_MM. The width follows the cropped image's own aspect ratio, so the
+ * image is scaled 1:1 and never distorted - CARD_MM.width is the finished size the
+ * scan is meant to have, not a box the image is squeezed into.
+ *
+ * Horizontally centred; vertically centred and then lifted by LINUX_LIFT_MM.
  */
-export function overscanPlacementPt() {
+export function overscanPlacementPt(croppedW, croppedH) {
   const divisor = OVERSCAN * LINUX_SIZE_CORRECTION;
-  const width = (CARD_MM.width / divisor) * PT_PER_MM;
-  const height = (CARD_MM.height / divisor) * PT_PER_MM;
+  const height = (CARD_MM.height / divisor + LINUX_SIZE_BOOST_MM) * PT_PER_MM;
+  const width = height * (croppedW / croppedH);
   const page = PAGE_MM * PT_PER_MM;
   return {
     x: (page - width) / 2,
-    // Centred, then lifted. pdf-lib's y grows upwards, so a positive offset moves up.
+    // pdf-lib's y grows upwards, so a positive offset moves the card up.
     y: (page - height) / 2 + LINUX_LIFT_MM * PT_PER_MM,
     width,
     height,
@@ -158,7 +163,7 @@ export function effectivePaddingMm(target, paddingMm) {
 export function cardPlacementPt(target, croppedW, croppedH) {
   return target === TARGET_WINDOWS
     ? aspectPlacementPt(croppedW, croppedH)
-    : overscanPlacementPt();
+    : overscanPlacementPt(croppedW, croppedH);
 }
 
 /**

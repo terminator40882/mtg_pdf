@@ -18,6 +18,7 @@ import {
   DEFAULT_TARGET,
   LINUX_BORDER_MM,
   LINUX_LIFT_MM,
+  LINUX_SIZE_BOOST_MM,
   LINUX_SIZE_CORRECTION,
   OVERSCAN,
   PAGE_MM,
@@ -233,53 +234,68 @@ describe('output targets', () => {
   });
 
   describe('Linux (borderless overscan)', () => {
-    it('shrinks by OVERSCAN and the 835/818 size correction', () => {
-      const { width, height } = overscanPlacementPt();
+    // Crop is 0.7mm smaller on Linux, so the sample yields 2047x2835, not 1999x2787.
+    const LINUX_W = 2047;
+    const LINUX_H = 2835;
+
+    it('derives the height from OVERSCAN, the 835/818 correction and the 0.6mm boost', () => {
+      const { height } = overscanPlacementPt(LINUX_W, LINUX_H);
       const divisor = OVERSCAN * LINUX_SIZE_CORRECTION;
       expect(LINUX_SIZE_CORRECTION).toBeCloseTo(835 / 818, 12);
-      expect(mm(width)).toBeCloseTo(CARD_MM.width / divisor, 9);
-      expect(mm(height)).toBeCloseTo(CARD_MM.height / divisor, 9);
-      expect(mm(width)).toBeCloseTo(59.0593, 3);
-      expect(mm(height)).toBeCloseTo(82.6831, 3);
+      expect(LINUX_SIZE_BOOST_MM).toBe(0.6);
+      expect(mm(height)).toBeCloseTo(CARD_MM.height / divisor + LINUX_SIZE_BOOST_MM, 9);
+      expect(mm(height)).toBeCloseTo(83.2831, 3);
     });
 
-    it('is smaller than overscan alone would make it', () => {
-      const { width, height } = overscanPlacementPt();
-      expect(mm(width)).toBeLessThan(CARD_MM.width / OVERSCAN);
-      expect(mm(height)).toBeLessThan(CARD_MM.height / OVERSCAN);
-      // Exactly the 835/818 ratio smaller.
-      expect(mm(width) * LINUX_SIZE_CORRECTION).toBeCloseTo(CARD_MM.width / OVERSCAN, 9);
+    it('is exactly 0.6mm taller than it would be without the boost', () => {
+      const { height } = overscanPlacementPt(LINUX_W, LINUX_H);
+      const divisor = OVERSCAN * LINUX_SIZE_CORRECTION;
+      expect(mm(height) - CARD_MM.height / divisor).toBeCloseTo(LINUX_SIZE_BOOST_MM, 9);
+      expect(mm(height)).toBeCloseTo(82.6831 + 0.6, 3);
+    });
+
+    it('scales 1:1 — the rectangle keeps the source aspect ratio', () => {
+      for (const [w, h] of [[LINUX_W, LINUX_H], [295, 420], [1000, 1000], [3000, 1000]]) {
+        const rect = overscanPlacementPt(w, h);
+        expect(rect.width / rect.height).toBeCloseTo(w / h, 9);
+      }
+    });
+
+    it('keeps the height fixed and lets only the width follow the source', () => {
+      const tall = overscanPlacementPt(1000, 2000);
+      const wide = overscanPlacementPt(2000, 2000);
+      expect(wide.height).toBeCloseTo(tall.height, 9);
+      expect(wide.width).toBeCloseTo(tall.width * 2, 9);
     });
 
     it('centres horizontally and lifts the centre by 1.3mm', () => {
-      const { x, y, width, height } = overscanPlacementPt();
+      const { x, y, width, height } = overscanPlacementPt(LINUX_W, LINUX_H);
       const page = PAGE_MM * PT_PER_MM;
       expect(LINUX_LIFT_MM).toBe(1.3);
-      // Left margin still equals right margin.
+      // Left margin equals right margin.
       expect(x).toBeCloseTo(page - x - width, 9);
-      expect(mm(x)).toBeCloseTo(14.9203, 3);
+      expect(mm(x)).toBeCloseTo(14.3829, 3);
       // Vertically the card centre sits 1.3mm above the page centre.
       expect(mm(y + height / 2)).toBeCloseTo(PAGE_MM / 2 + LINUX_LIFT_MM, 9);
       expect(mm(y + height / 2)).toBeCloseTo(45.75, 6);
       // So the top margin is 2.6mm smaller than the bottom one.
-      expect(mm(page - y - height)).toBeCloseTo(1.8085, 3);
-      expect(mm(y)).toBeCloseTo(4.4085, 3);
+      expect(mm(page - y - height)).toBeCloseTo(1.5085, 3);
+      expect(mm(y)).toBeCloseTo(4.1085, 3);
       expect(mm(y) - mm(page - y - height)).toBeCloseTo(2 * LINUX_LIFT_MM, 9);
     });
 
-    it('ignores the source aspect ratio (preserveAspectRatio=False)', () => {
-      const square = overscanPlacementPt(1000, 1000);
-      const wide = overscanPlacementPt(3000, 1000);
-      expect(wide).toEqual(square);
-      // The target rectangle is 63.5:88.9, not the cropped image's ratio.
-      const { width, height } = overscanPlacementPt();
-      expect(width / height).toBeCloseTo(CARD_MM.width / CARD_MM.height, 9);
-      expect(width / height).not.toBeCloseTo(CROPPED_W / CROPPED_H, 4);
+    it('stays inside the page for a normal card scan', () => {
+      const { x, y, width, height } = overscanPlacementPt(LINUX_W, LINUX_H);
+      const page = PAGE_MM * PT_PER_MM;
+      expect(x).toBeGreaterThan(0);
+      expect(y).toBeGreaterThan(0);
+      expect(x + width).toBeLessThan(page);
+      expect(y + height).toBeLessThan(page);
     });
 
     it('is what cardPlacementPt returns for the Linux target', () => {
       expect(cardPlacementPt(TARGET_LINUX, CROPPED_W, CROPPED_H)).toEqual(
-        overscanPlacementPt(),
+        overscanPlacementPt(CROPPED_W, CROPPED_H),
       );
     });
   });
@@ -307,12 +323,14 @@ describe('output targets', () => {
     });
   });
 
-  it('draws the Linux card smaller and lower than the Windows one', () => {
+  it('draws the Linux card smaller and higher than the Windows one', () => {
     const linux = cardPlacementPt(TARGET_LINUX, CROPPED_W, CROPPED_H);
     const windows = cardPlacementPt(TARGET_WINDOWS, CROPPED_W, CROPPED_H);
     expect(linux.width).toBeLessThan(windows.width);
     expect(linux.height).toBeLessThan(windows.height);
     expect(linux.y).toBeGreaterThan(windows.y); // pdf-lib y grows upwards
+    // Both keep the source aspect ratio now, so they differ only by scale and position.
+    expect(linux.width / linux.height).toBeCloseTo(windows.width / windows.height, 9);
   });
 });
 
