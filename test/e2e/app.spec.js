@@ -206,14 +206,14 @@ test('defaults to the Linux target and centres the shrunk card', async ({ page }
   const { pdf } = await generateAndRead(page);
 
   // 88.9mm / (OVERSCAN * 835/818) + 1.1mm tall, width following the cropped image's
-  // aspect ratio, centred horizontally, card centre lifted 1.3mm above the page centre.
+  // aspect ratio, card centre 0.3mm right of and 1.6mm above the page centre.
   const PT_PER_MM = 72 / 25.4;
   const { width, height, x, y } = imageMatrix(pdf, 0);
   expect(height / PT_PER_MM).toBeCloseTo(83.7831, 3);
   expect(width / PT_PER_MM).toBeCloseTo(58.8476, 3);
-  expect(x / PT_PER_MM).toBeCloseTo(15.0262, 3);
+  expect(x / PT_PER_MM).toBeCloseTo(15.3262, 3);
   expect(y / PT_PER_MM).toBeCloseTo(4.1585, 3);
-  expect(x).toBeCloseTo(252 - x - width, 3); // symmetric left/right
+  expect((x + width / 2) / PT_PER_MM).toBeCloseTo(88.9 / 2 + 0.3, 3); // shifted right
   expect((y + height / 2) / PT_PER_MM).toBeCloseTo(88.9 / 2 + 1.6, 3); // lifted centre
 
   // 1:1 — the drawn rectangle must match the embedded image's aspect ratio exactly,
@@ -338,7 +338,7 @@ test.describe('print alignment offsets', () => {
     await page.setInputFiles('#fileInput', CARD_A);
     await expect(page.locator('#offsetXRow')).toBeVisible();
     await expect(page.locator('#offsetYRow')).toBeVisible();
-    await expect(page.locator('#offsetXValue')).toHaveText('0.0');
+    await expect(page.locator('#offsetXValue')).toHaveText('0.3');
     await expect(page.locator('#offsetYValue')).toHaveText('1.6');
 
     await page.click('#targetBtn');
@@ -352,7 +352,7 @@ test.describe('print alignment offsets', () => {
 
     await click(page, '#offsetXPlus', 10); // +1.0mm right
     await click(page, '#offsetYMinus', 4); // -0.4mm, i.e. down
-    await expect(page.locator('#offsetXValue')).toHaveText('1.0');
+    await expect(page.locator('#offsetXValue')).toHaveText('1.3');
     await expect(page.locator('#offsetYValue')).toHaveText('1.2');
 
     const after = imageMatrix((await generateAndRead(page)).pdf, 0);
@@ -373,10 +373,11 @@ test.describe('print alignment offsets', () => {
 
   test('are capped at 10mm', async ({ page }) => {
     await page.setInputFiles('#fileInput', CARD_A);
+    // The cap applies to the nudge, so the displayed total is the 0.3mm base plus it.
     await click(page, '#offsetXPlus', 120);
-    await expect(page.locator('#offsetXValue')).toHaveText('10.0');
+    await expect(page.locator('#offsetXValue')).toHaveText('10.3');
     await click(page, '#offsetXMinus', 240);
-    await expect(page.locator('#offsetXValue')).toHaveText('-10.0');
+    await expect(page.locator('#offsetXValue')).toHaveText('-9.7');
   });
 
   test('survive "Generate another", unlike padding', async ({ page }) => {
@@ -384,11 +385,11 @@ test.describe('print alignment offsets', () => {
     await page.setInputFiles('#fileInput', CARD_A);
     await click(page, '#offsetXPlus', 3);
     await click(page, '#paddingPlus', 3);
-    await expect(page.locator('#offsetXValue')).toHaveText('0.3');
+    await expect(page.locator('#offsetXValue')).toHaveText('0.6');
     await expect(page.locator('#paddingValue')).toHaveText('3.1');
 
     await page.getByRole('button', { name: 'Generate another' }).click();
-    await expect(page.locator('#offsetXValue')).toHaveText('0.3');
+    await expect(page.locator('#offsetXValue')).toHaveText('0.6');
     await expect(page.locator('#paddingValue')).toHaveText('2.8');
   });
 });

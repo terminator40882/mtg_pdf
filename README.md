@@ -75,8 +75,9 @@ real prints:
   factor (`OVERSCAN`, 1.0533) so the printer blows it back up,
 - shrunk again by `LINUX_SIZE_CORRECTION` (835/818),
 - then grown by `LINUX_SIZE_BOOST_MM` (1.1 mm),
-- centred horizontally, with the card centre lifted `LINUX_LIFT_MM` (1.6 mm) above the
-  page centre — so the top margin ends up 3.2 mm smaller than the bottom one,
+- centred, then moved `LINUX_SHIFT_MM` (0.3 mm) right and lifted `LINUX_LIFT_MM`
+  (1.6 mm) above the page centre — so the left margin ends up 0.6 mm larger than the
+  right one and the top margin 3.2 mm smaller than the bottom one,
 - and cropped `LINUX_BORDER_MM` (0.7 mm) less than the padding control asks for, which
   leaves that much extra black border on the card.
 
@@ -90,9 +91,10 @@ cropped image's aspect ratio, flush with the top edge.
 | | Linux | Windows |
 | --- | --- | --- |
 | image rectangle | 60.495 × 83.783 mm | 63.189 × 88.098 mm |
-| margin left / right | 14.202 / 14.202 mm | 13.163 / 12.548 mm |
+| margin left / right | 14.502 / 13.902 mm | 13.163 / 12.548 mm |
 | margin top / bottom | 0.959 / 4.159 mm | 0.000 / 0.802 mm |
-| card centre | 46.050 mm (page centre + 1.6) | 44.851 mm |
+| card centre x | 44.750 mm (page centre + 0.3) | 44.856 mm |
+| card centre y | 46.050 mm (page centre + 1.6) | 44.851 mm |
 | effective crop padding | 2.1 mm | 2.8 mm |
 | distortion | none (1:1) | none (1:1) |
 
@@ -107,9 +109,10 @@ setting, so "Generate another" leaves it alone.
 ### Print alignment
 
 On the Linux target two extra control rows appear next to padding and corner radius:
-**X offset** (positive moves the card right) and **Y offset** (positive moves it up,
-shown as the total including the 1.6 mm built-in lift). Both step in 0.1 mm and are
-capped at ±`OFFSET_LIMIT_MM` (10 mm). They shift the card without resizing it.
+**X offset** (positive moves the card right) and **Y offset** (positive moves it up).
+Each shows the total including its built-in base — 0.3 mm for X, 1.6 mm for Y — so they
+start at `0.3` and `1.6`. Both step in 0.1 mm, and the cap of ±`OFFSET_LIMIT_MM` (10 mm)
+applies to the nudge, not the total. They shift the card without resizing it.
 
 These calibrate a printer rather than a batch, so "Generate another" keeps them — only
 padding and corner radius reset. They are not persisted across a reload; say so if you

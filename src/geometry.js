@@ -55,6 +55,8 @@ export const OVERSCAN = 1.0533;
 export const LINUX_SIZE_CORRECTION = 835 / 818;
 /** The card centre sits this far above the page centre, before the Y offset. */
 export const LINUX_LIFT_MM = 1.6;
+/** ...and this far right of the page centre, before the X offset. */
+export const LINUX_SHIFT_MM = 0.3;
 /** Crop this much less than asked for, so more of the black border survives. */
 export const LINUX_BORDER_MM = 0.7;
 /** Measured height correction, added after the divisors. */
@@ -121,9 +123,9 @@ export function cornerRadiusPx(imgHeightPx, cornerMm) {
  * image is scaled 1:1 and never distorted - CARD_MM.width is the finished size the
  * scan is meant to have, not a box the image is squeezed into.
  *
- * Horizontally centred; vertically centred and then lifted by LINUX_LIFT_MM. Both are
- * then nudged by the manual print-alignment offsets: positive x moves right, positive
- * y moves up.
+ * Centred on both axes, then shifted by LINUX_SHIFT_MM to the right and lifted by
+ * LINUX_LIFT_MM, then nudged by the manual print-alignment offsets: positive x moves
+ * right, positive y moves up.
  */
 export function overscanPlacementPt(croppedW, croppedH, offsetXMm = 0, offsetYMm = 0) {
   const divisor = OVERSCAN * LINUX_SIZE_CORRECTION;
@@ -131,7 +133,7 @@ export function overscanPlacementPt(croppedW, croppedH, offsetXMm = 0, offsetYMm
   const width = height * (croppedW / croppedH);
   const page = PAGE_MM * PT_PER_MM;
   return {
-    x: (page - width) / 2 + offsetXMm * PT_PER_MM,
+    x: (page - width) / 2 + (LINUX_SHIFT_MM + offsetXMm) * PT_PER_MM,
     // pdf-lib's y grows upwards, so a positive offset moves the card up.
     y: (page - height) / 2 + (LINUX_LIFT_MM + offsetYMm) * PT_PER_MM,
     width,

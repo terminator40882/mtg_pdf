@@ -8,6 +8,7 @@
 import {
   CORNER_RADIUS_BASE_MM,
   LINUX_LIFT_MM,
+  LINUX_SHIFT_MM,
   PADDING_BASE_MM,
   clampCornerDelta,
   clampOffsetMm,
@@ -25,7 +26,7 @@ const el = (id) => document.getElementById(id);
 export function createControls({ onAlignmentChange = () => {} } = {}) {
   let paddingDelta = 0;
   let cornerDelta = 0;
-  let offsetXMm = 0;
+  let offsetXDelta = 0;
   let offsetYDelta = 0;
 
   const paddingValue = el('paddingValue');
@@ -38,7 +39,7 @@ export function createControls({ onAlignmentChange = () => {} } = {}) {
   function render() {
     paddingValue.textContent = (PADDING_BASE_MM + paddingDelta).toFixed(1);
     cornerValue.textContent = (CORNER_RADIUS_BASE_MM + cornerDelta).toFixed(1);
-    offsetXValue.textContent = offsetXMm.toFixed(1);
+    offsetXValue.textContent = (LINUX_SHIFT_MM + offsetXDelta).toFixed(1);
     offsetYValue.textContent = (LINUX_LIFT_MM + offsetYDelta).toFixed(1);
   }
 
@@ -55,8 +56,8 @@ export function createControls({ onAlignmentChange = () => {} } = {}) {
   bind('cornerMinus', () => { cornerDelta = clampCornerDelta(cornerDelta - STEP); });
   bind('cornerPlus', () => { cornerDelta += STEP; });
   // Positive x moves the card right, positive y moves it up.
-  bind('offsetXMinus', () => { offsetXMm = clampOffsetMm(offsetXMm - STEP); }, true);
-  bind('offsetXPlus', () => { offsetXMm = clampOffsetMm(offsetXMm + STEP); }, true);
+  bind('offsetXMinus', () => { offsetXDelta = clampOffsetMm(offsetXDelta - STEP); }, true);
+  bind('offsetXPlus', () => { offsetXDelta = clampOffsetMm(offsetXDelta + STEP); }, true);
   bind('offsetYMinus', () => { offsetYDelta = clampOffsetMm(offsetYDelta - STEP); }, true);
   bind('offsetYPlus', () => { offsetYDelta = clampOffsetMm(offsetYDelta + STEP); }, true);
 
@@ -67,7 +68,7 @@ export function createControls({ onAlignmentChange = () => {} } = {}) {
     values: () => ({
       paddingMm: PADDING_BASE_MM + paddingDelta,
       cornerMm: CORNER_RADIUS_BASE_MM + cornerDelta,
-      offsetXMm,
+      offsetXMm: offsetXDelta,
       offsetYMm: offsetYDelta,
     }),
     /** Clear the per-batch values, keeping the printer alignment. */

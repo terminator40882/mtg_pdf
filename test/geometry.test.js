@@ -18,6 +18,7 @@ import {
   DEFAULT_TARGET,
   LINUX_BORDER_MM,
   LINUX_LIFT_MM,
+  LINUX_SHIFT_MM,
   LINUX_SIZE_BOOST_MM,
   LINUX_SIZE_CORRECTION,
   OFFSET_LIMIT_MM,
@@ -270,13 +271,15 @@ describe('output targets', () => {
       expect(wide.width).toBeCloseTo(tall.width * 2, 9);
     });
 
-    it('centres horizontally and lifts the centre by 1.3mm', () => {
+    it('shifts 0.3mm right and lifts the centre 1.6mm', () => {
       const { x, y, width, height } = overscanPlacementPt(LINUX_W, LINUX_H);
       const page = PAGE_MM * PT_PER_MM;
       expect(LINUX_LIFT_MM).toBe(1.6);
-      // Left margin equals right margin.
-      expect(x).toBeCloseTo(page - x - width, 9);
-      expect(mm(x)).toBeCloseTo(14.2024, 3);
+      expect(LINUX_SHIFT_MM).toBe(0.3);
+      // Centred, then moved right: the left margin exceeds the right by 2 x 0.3mm.
+      expect(mm(x + width / 2)).toBeCloseTo(PAGE_MM / 2 + LINUX_SHIFT_MM, 9);
+      expect(mm(x) - mm(page - x - width)).toBeCloseTo(2 * LINUX_SHIFT_MM, 9);
+      expect(mm(x)).toBeCloseTo(14.5024, 3);
       // Vertically the card centre sits 1.3mm above the page centre.
       expect(mm(y + height / 2)).toBeCloseTo(PAGE_MM / 2 + LINUX_LIFT_MM, 9);
       expect(mm(y + height / 2)).toBeCloseTo(46.05, 6);
@@ -393,8 +396,9 @@ describe('print-alignment offsets', () => {
     expect(moved.height).toBe(base.height);
   });
 
-  it('stacks the y offset on top of the built-in lift', () => {
-    const { y, height } = overscanPlacementPt(W, H, 0, 0.5);
+  it('stacks the offsets on top of the built-in shift and lift', () => {
+    const { x, y, width, height } = overscanPlacementPt(W, H, 0.4, 0.5);
+    expect(mm(x + width / 2)).toBeCloseTo(PAGE_MM / 2 + LINUX_SHIFT_MM + 0.4, 9);
     expect(mm(y + height / 2)).toBeCloseTo(PAGE_MM / 2 + LINUX_LIFT_MM + 0.5, 9);
   });
 
