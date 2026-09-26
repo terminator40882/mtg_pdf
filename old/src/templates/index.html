@@ -1,0 +1,355 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>MTG Card PDF</title>
+  <style>
+    :root {
+      --bg: #1a1a1a;
+      --bg-panel: #252525;
+      --text: #e8e8e8;
+      --text-muted: #a0a0a0;
+      --accent: #6b9bd1;
+      --accent-hover: #8ab4e8;
+      --border: #3a3a3a;
+      --error: #c75c5c;
+    }
+    * { box-sizing: border-box; }
+    body {
+      font-family: system-ui, -apple-system, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      margin: 0;
+      min-height: 100vh;
+      padding: 1rem;
+    }
+    .container { max-width: 900px; margin: 0 auto; }
+    h1 { font-size: 1.5rem; margin: 0 0 1.5rem; font-weight: 600; }
+    .drop-zone {
+      border: 2px dashed var(--border);
+      border-radius: 12px;
+      padding: 2rem;
+      text-align: center;
+      background: var(--bg-panel);
+      cursor: pointer;
+      transition: border-color 0.2s, background 0.2s;
+    }
+    .drop-zone:hover, .drop-zone.dragover { border-color: var(--accent); background: #2a2a2a; }
+    .drop-zone input[type="file"] { display: none; }
+    .drop-zone label { cursor: pointer; color: var(--accent); }
+    .preview-section { margin-top: 1.5rem; }
+    .preview-section h2 { font-size: 1.1rem; margin: 0 0 0.75rem; font-weight: 600; }
+    .preview-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+      gap: 1rem;
+    }
+    .preview-item {
+      background: var(--bg-panel);
+      border-radius: 8px;
+      overflow: hidden;
+      border: 1px solid var(--border);
+      cursor: grab;
+      position: relative;
+    }
+    .preview-item:active { cursor: grabbing; }
+    .preview-item.dragging { opacity: 0.5; }
+    .preview-item .thumb-wrap {
+      aspect-ratio: 63/88;
+      overflow: hidden;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: #1a1a1a;
+    }
+    .preview-item .thumb-wrap img { width: 100%; height: 100%; object-fit: contain; display: block; }
+    .preview-item .num { position: absolute; top: 4px; left: 4px; background: rgba(0,0,0,0.7); color: #fff; padding: 2px 6px; border-radius: 4px; font-size: 0.75rem; }
+    .preview-item .name { padding: 0.4rem 0.5rem; font-size: 0.7rem; color: var(--text-muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .controls {
+      margin-top: 1.5rem;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 1.5rem;
+      align-items: center;
+    }
+    .control-row { display: flex; align-items: center; gap: 0.5rem; }
+    .control-row label { font-size: 0.9rem; color: var(--text-muted); }
+    .control-row .base { font-size: 0.8rem; color: var(--text-muted); }
+    .control-row .value { min-width: 2.5rem; text-align: center; font-weight: 600; }
+    .btn {
+      background: var(--accent);
+      color: #fff;
+      border: none;
+      padding: 0.6rem 1rem;
+      border-radius: 8px;
+      font-size: 0.9rem;
+      cursor: pointer;
+      transition: background 0.2s;
+    }
+    .btn:hover:not(:disabled) { background: var(--accent-hover); }
+    .btn:disabled { opacity: 0.5; cursor: not-allowed; }
+    .btn-sm { padding: 0.35rem 0.6rem; font-size: 0.85rem; }
+    .btn-ghost { background: var(--bg-panel); color: var(--text); border: 1px solid var(--border); }
+    .btn-ghost:hover:not(:disabled) { background: #333; }
+    .actions { margin-top: 1.5rem; display: flex; flex-wrap: wrap; gap: 0.75rem; align-items: center; }
+    .message { margin-top: 1rem; padding: 0.75rem; border-radius: 8px; font-size: 0.9rem; }
+    .message.error { background: rgba(199,92,92,0.2); color: var(--error); }
+    .message.success { background: rgba(100,160,100,0.2); color: #8bc98b; }
+    .message.hidden { display: none; }
+    #lightbox {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.9);
+      z-index: 100;
+      align-items: center;
+      justify-content: center;
+      padding: 1rem;
+    }
+    #lightbox.show { display: flex; }
+    #lightbox img { max-width: 100%; max-height: 90vh; object-fit: contain; border-radius: 8px; }
+    #lightbox .close { position: absolute; top: 1rem; right: 1rem; background: var(--bg-panel); color: var(--text); border: 1px solid var(--border); width: 2.5rem; height: 2.5rem; border-radius: 8px; cursor: pointer; font-size: 1.2rem; }
+    @media (max-width: 600px) {
+      .controls { flex-direction: column; align-items: flex-start; }
+      .actions { flex-direction: column; align-items: stretch; }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>MTG Card PDF</h1>
+    <div class="drop-zone" id="dropZone">
+      <input type="file" id="fileInput" name="files" accept="image/*" multiple>
+      <label for="fileInput">Select files</label>
+      <span> or drag and drop</span>
+    </div>
+    <div id="message" class="message hidden"></div>
+    <div class="preview-section" id="previewSection" style="display: none;">
+      <h2>Preview — drag to reorder</h2>
+      <div class="preview-grid" id="previewGrid"></div>
+      <div class="controls">
+        <div class="control-row">
+          <label>Padding (mm):</label>
+          <span class="base">base 2.8</span>
+          <button type="button" class="btn btn-sm btn-ghost" id="paddingMinus">−</button>
+          <span class="value" id="paddingValue">2.8</span>
+          <button type="button" class="btn btn-sm btn-ghost" id="paddingPlus">+</button>
+        </div>
+        <div class="control-row">
+          <label>Corner radius (mm):</label>
+          <span class="base">base 2</span>
+          <button type="button" class="btn btn-sm btn-ghost" id="cornerMinus">−</button>
+          <span class="value" id="cornerValue">2</span>
+          <button type="button" class="btn btn-sm btn-ghost" id="cornerPlus">+</button>
+        </div>
+      </div>
+      <div class="actions">
+        <button type="button" class="btn" id="generateBtn">Generate PDF</button>
+        <button type="button" class="btn btn-ghost" id="downloadBtn" disabled>Download PDF</button>
+        <button type="button" class="btn btn-ghost" id="resetBtn">Generate another</button>
+      </div>
+    </div>
+    <a id="downloadLink" href="#" class="btn" download style="display: none;">Download PDF</a>
+  </div>
+  <div id="lightbox">
+    <button type="button" class="close" id="lightboxClose" aria-label="Close">&times;</button>
+    <img id="lightboxImg" src="" alt="">
+  </div>
+  <script>
+    const PADDING_BASE = 2.8;
+    const CORNER_BASE = 2;
+    let thumbnails = [];
+    let order = [];
+    let paddingDelta = 0;
+    let cornerDelta = 0;
+    let pdfReady = false;
+
+    const dropZone = document.getElementById('dropZone');
+    const fileInput = document.getElementById('fileInput');
+    const messageEl = document.getElementById('message');
+    const previewSection = document.getElementById('previewSection');
+    const previewGrid = document.getElementById('previewGrid');
+    const paddingValue = document.getElementById('paddingValue');
+    const cornerValue = document.getElementById('cornerValue');
+    const generateBtn = document.getElementById('generateBtn');
+    const downloadBtn = document.getElementById('downloadBtn');
+    const resetBtn = document.getElementById('resetBtn');
+    const downloadLink = document.getElementById('downloadLink');
+
+    function showMessage(text, type) {
+      messageEl.textContent = text;
+      messageEl.className = 'message ' + (type || '');
+      messageEl.classList.remove('hidden');
+    }
+    function hideMessage() {
+      messageEl.classList.add('hidden');
+    }
+
+    function renderPreview() {
+      previewGrid.innerHTML = '';
+      order.forEach((idx, position) => {
+        const item = thumbnails[idx];
+        if (!item) return;
+        const div = document.createElement('div');
+        div.className = 'preview-item';
+        div.draggable = true;
+        div.dataset.index = String(position);
+        div.innerHTML = '<span class="num">' + (position + 1) + '</span><div class="thumb-wrap"><img src="' + item.data_url + '" alt=""></div><div class="name" title="' + escapeHtml(item.filename) + '">' + escapeHtml(item.filename) + '</div>';
+        div.addEventListener('click', function(e) {
+          if (e.target.closest('.thumb-wrap')) {
+            document.getElementById('lightboxImg').src = item.data_url;
+            document.getElementById('lightbox').classList.add('show');
+          }
+        });
+        div.addEventListener('dragstart', onDragStart);
+        div.addEventListener('dragover', onDragOver);
+        div.addEventListener('drop', onDrop);
+        div.addEventListener('dragend', onDragEnd);
+        previewGrid.appendChild(div);
+      });
+    }
+    function escapeHtml(s) {
+      const div = document.createElement('div');
+      div.textContent = s;
+      return div.innerHTML;
+    }
+    let draggedIndex = null;
+    function onDragStart(e) {
+      draggedIndex = parseInt(e.currentTarget.dataset.index, 10);
+      e.currentTarget.classList.add('dragging');
+      e.dataTransfer.effectAllowed = 'move';
+      e.dataTransfer.setData('text/plain', draggedIndex);
+    }
+    function onDragOver(e) {
+      e.preventDefault();
+      e.dataTransfer.dropEffect = 'move';
+    }
+    function onDrop(e) {
+      e.preventDefault();
+      const toIndex = parseInt(e.currentTarget.dataset.index, 10);
+      if (draggedIndex === null || draggedIndex === toIndex) return;
+      const newOrder = order.slice();
+      const [rem] = newOrder.splice(draggedIndex, 1);
+      newOrder.splice(toIndex, 0, rem);
+      order = newOrder;
+      renderPreview();
+    }
+    function onDragEnd(e) {
+      e.currentTarget.classList.remove('dragging');
+      draggedIndex = null;
+    }
+
+    function updateControlLabels() {
+      paddingValue.textContent = (PADDING_BASE + paddingDelta).toFixed(1);
+      cornerValue.textContent = (CORNER_BASE + cornerDelta).toFixed(1);
+    }
+    document.getElementById('paddingMinus').addEventListener('click', () => { paddingDelta -= 0.1; updateControlLabels(); });
+    document.getElementById('paddingPlus').addEventListener('click', () => { paddingDelta += 0.1; updateControlLabels(); });
+    document.getElementById('cornerMinus').addEventListener('click', () => { cornerDelta -= 0.1; cornerDelta = Math.max(-2, cornerDelta); updateControlLabels(); });
+    document.getElementById('cornerPlus').addEventListener('click', () => { cornerDelta += 0.1; updateControlLabels(); });
+
+    document.getElementById('lightboxClose').addEventListener('click', () => document.getElementById('lightbox').classList.remove('show'));
+    document.getElementById('lightbox').addEventListener('click', function(e) {
+      if (e.target === this) this.classList.remove('show');
+    });
+
+    function uploadFiles(files) {
+      if (!files.length) return;
+      hideMessage();
+      const fd = new FormData();
+      for (let i = 0; i < files.length; i++) fd.append('files', files[i]);
+      fetch('/upload', { method: 'POST', body: fd })
+        .then(r => r.json())
+        .then(data => {
+          if (!data.ok) {
+            showMessage(data.error || 'Upload failed', 'error');
+            return;
+          }
+          data.thumbnails.forEach(t => {
+            while (thumbnails.length <= t.id) thumbnails.push(null);
+            thumbnails[t.id] = { id: t.id, filename: t.filename, data_url: t.data_url };
+            order.push(t.id);
+          });
+          previewSection.style.display = 'block';
+          renderPreview();
+          updateControlLabels();
+        })
+        .catch(() => showMessage('Network error', 'error'));
+    }
+    dropZone.addEventListener('click', () => fileInput.click());
+    dropZone.addEventListener('dragover', (e) => { e.preventDefault(); dropZone.classList.add('dragover'); });
+    dropZone.addEventListener('dragleave', () => dropZone.classList.remove('dragover'));
+    dropZone.addEventListener('drop', (e) => {
+      e.preventDefault();
+      dropZone.classList.remove('dragover');
+      uploadFiles(Array.from(e.dataTransfer.files));
+    });
+    fileInput.addEventListener('change', () => {
+      uploadFiles(Array.from(fileInput.files));
+      fileInput.value = '';
+    });
+
+    generateBtn.addEventListener('click', () => {
+      if (!thumbnails.length) return;
+      hideMessage();
+      generateBtn.disabled = true;
+      const origLabel = generateBtn.textContent;
+      generateBtn.textContent = 'Generating…';
+      fetch('/generate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          order: order,
+          paddingDelta: paddingDelta,
+          cornerDelta: cornerDelta
+        })
+      })
+        .then(r => r.json().then(data => ({ ok: data.ok, error: data.error, download_url: data.download_url, status: r.status })))
+        .then(({ ok, error, download_url, status }) => {
+          generateBtn.disabled = false;
+          generateBtn.textContent = 'Generate PDF';
+          if (!ok || status >= 400) {
+            showMessage(error || 'Generate failed', 'error');
+            return;
+          }
+          pdfReady = true;
+          downloadBtn.disabled = false;
+          downloadLink.href = download_url + '?t=' + Date.now();
+          downloadLink.download = 'mtg_cards.pdf';
+          downloadLink.click();
+        })
+        .catch(() => {
+          generateBtn.disabled = false;
+          generateBtn.textContent = 'Generate PDF';
+          showMessage('Network error', 'error');
+        });
+    });
+
+    downloadBtn.addEventListener('click', () => {
+      if (pdfReady) {
+        downloadLink.href = '/download?t=' + Date.now();
+        downloadLink.download = 'mtg_cards.pdf';
+        downloadLink.click();
+      }
+    });
+
+    function doReset() {
+      fetch('/reset', { method: 'POST' })
+        .then(() => {})
+        .catch(() => {});
+      thumbnails = [];
+      order = [];
+      paddingDelta = 0;
+      cornerDelta = 0;
+      pdfReady = false;
+      downloadBtn.disabled = true;
+      previewSection.style.display = 'none';
+      previewGrid.innerHTML = '';
+      updateControlLabels();
+      hideMessage();
+    }
+    resetBtn.addEventListener('click', doReset);
+  </script>
+</body>
+</html>

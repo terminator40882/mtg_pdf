@@ -1,0 +1,7 @@
+---
+alwaysApply: true
+---
+
+- When implementing a function, write a test functions to test it
+- When changing code, test if the changes are funcitonal using the corresponding tests
+- Never skip a test if something doesn't work. Never change a test to skip

@@ -1,0 +1,11 @@
+---
+alwaysApply: true
+---
+
+- python using flask for the backend
+- html/js for the frontend
+- database in the form of folders, yaml-files and other files under './data'
+- code in './src'
+- tests in './test'
+- user specification in './spec/user'
+- ai-written specification in './spec/ai'

@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>MTG Card PDF</title>
+  <!-- Relative paths only: GitLab Pages serves this under /<project>/ -->
+  <link rel="stylesheet" href="./styles.css">
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <h1>MTG Card PDF</h1>
+      <button type="button" class="btn btn-ghost" id="targetBtn">Target: Linux</button>
+    </div>
+    <div class="drop-zone" id="dropZone">
+      <input type="file" id="fileInput" name="files" accept="image/*" multiple>
+      <label for="fileInput">Select files</label>
+      <span> or drag and drop</span>
+    </div>
+    <div id="message" class="message hidden"></div>
+    <div class="preview-section" id="previewSection" style="display: none;">
+      <h2>Preview — drag to reorder</h2>
+      <div class="preview-grid" id="previewGrid"></div>
+      <div class="controls">
+        <div class="control-row">
+          <label>Padding (mm):</label>
+          <span class="base">base 2.8</span>
+          <button type="button" class="btn btn-sm btn-ghost" id="paddingMinus">−</button>
+          <span class="value" id="paddingValue">2.8</span>
+          <button type="button" class="btn btn-sm btn-ghost" id="paddingPlus">+</button>
+        </div>
+        <div class="control-row">
+          <label>Corner radius (mm):</label>
+          <span class="base">base 2</span>
+          <button type="button" class="btn btn-sm btn-ghost" id="cornerMinus">−</button>
+          <span class="value" id="cornerValue">2</span>
+          <button type="button" class="btn btn-sm btn-ghost" id="cornerPlus">+</button>
+        </div>
+      </div>
+      <div class="actions">
+        <button type="button" class="btn" id="generateBtn">Generate PDF</button>
+        <button type="button" class="btn btn-ghost" id="downloadBtn" disabled>Download PDF</button>
+        <button type="button" class="btn btn-ghost" id="resetBtn">Generate another</button>
+      </div>
+    </div>
+    <div class="command-section" id="commandSection">
+      <h2>Print it</h2>
+      <button type="button" class="command" id="commandBtn" title="Click to copy">
+        <code id="commandText"></code>
+        <span class="command-hint" id="commandHint">Click to copy</span>
+      </button>
+    </div>
+    <a id="downloadLink" href="#" class="btn" download style="display: none;">Download PDF</a>
+  </div>
+  <div id="lightbox">
+    <button type="button" class="close" id="lightboxClose" aria-label="Close">&times;</button>
+    <img id="lightboxImg" src="" alt="">
+  </div>
+  <script type="module" src="./app.js"></script>
+</body>
+</html>

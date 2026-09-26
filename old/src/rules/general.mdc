@@ -1,0 +1,12 @@
+---
+alwaysApply: true
+---
+
+- Always prefer simple solutions.
+- Avoid code duplication; before adding new functionality, check for existing similar code elsewhere in the codebase.
+- Only make changes that are either explicitly requested or are clearly related and well understood.
+- When fixing bugs or issues, do not introduce new patterns or technologies unless all current options are exhausted. If a new pattern/technology is added, remove any obsolete/duplicate logic afterward.
+- Keep the codebase clean and organized at all times.
+- Avoid writing scripts directly in files if the script will only be run once.
+- Refactor files that exceed 200–300 lines of code; do not let files grow larger.
+- Keep the code modular

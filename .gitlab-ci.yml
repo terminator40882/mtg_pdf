@@ -1,0 +1,47 @@
+# The site is plain static files: there is nothing to build, the pages job only copies
+# src/ into public/. npm is needed for the test jobs only.
+stages:
+  - test
+  - deploy
+
+default:
+  cache:
+    key:
+      files:
+        - package-lock.json
+    paths:
+      - .npm/
+
+unit:
+  stage: test
+  image: node:22-alpine
+  script:
+    - npm ci --cache .npm --prefer-offline
+    - npm run test
+
+e2e:
+  stage: test
+  # Pinned to the installed @playwright/test version; bump both together.
+  image: mcr.microsoft.com/playwright:v1.63.0-noble
+  script:
+    - npm ci --cache .npm --prefer-offline
+    - npm run test:e2e
+  artifacts:
+    when: on_failure
+    expire_in: 1 week
+    paths:
+      - playwright-report/
+      - test-results/
+
+# The job must be named "pages" and the artifact directory must be "public".
+pages:
+  stage: deploy
+  image: alpine:latest
+  script:
+    - mkdir -p public
+    - cp -r src/. public/
+  artifacts:
+    paths:
+      - public
+  rules:
+    - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH

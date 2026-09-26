@@ -1,0 +1,4 @@
+---
+alwaysApply: true
+---
+Never execute any git command. do not edit/change/delete the .git folder. Do not do anything that might affect git's versioning.

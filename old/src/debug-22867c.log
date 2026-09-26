@@ -1,0 +1,54 @@
+{"sessionId": "22867c", "location": "app.py:upload", "message": "upload done", "data": {"store_len_after": 1, "thumbnails_ids": [0]}, "timestamp": 1771698306987.3684}
+{"sessionId": "22867c", "location": "app.py:generate", "message": "generate received", "data": {"store_len": 1, "order_raw": [0], "order_raw_len": 1}, "timestamp": 1771698308290.4841}
+{"sessionId": "22867c", "location": "app.py:generate", "message": "generate validation", "data": {"order": [0], "order_set": [0], "expected_set": [0], "len_ok": true, "set_ok": true}, "timestamp": 1771698308290.4841}
+{"sessionId": "22867c", "location": "app.py:upload", "message": "upload done", "data": {"store_len_after": 1, "thumbnails_ids": [0]}, "timestamp": 1771698316179.9797}
+{"sessionId": "22867c", "location": "app.py:generate", "message": "generate received", "data": {"store_len": 1, "order_raw": [0, 1], "order_raw_len": 2}, "timestamp": 1771698317738.449}
+{"sessionId": "22867c", "location": "app.py:generate", "message": "generate validation", "data": {"order": [0, 1], "order_set": [0, 1], "expected_set": [0], "len_ok": false, "set_ok": false}, "timestamp": 1771698317738.449}
+{"sessionId": "22867c", "location": "app.py:generate", "message": "generate invalid image order", "data": {"reason": "set mismatch", "len_ok": false}, "timestamp": 1771698317738.449}
+{"sessionId": "22867c", "location": "app.py:upload", "message": "upload done", "data": {"store_len_after": 1, "thumbnails_ids": [0]}, "timestamp": 1771698324421.769}
+{"sessionId": "22867c", "location": "app.py:generate", "message": "generate received", "data": {"store_len": 1, "order_raw": [0], "order_raw_len": 1}, "timestamp": 1771698325699.2202}
+{"sessionId": "22867c", "location": "app.py:generate", "message": "generate validation", "data": {"order": [0], "order_set": [0], "expected_set": [0], "len_ok": true, "set_ok": true}, "timestamp": 1771698325701.73}
+{"sessionId": "22867c", "location": "app.py:upload", "message": "upload done", "data": {"store_len_after": 1, "thumbnails_ids": [0]}, "timestamp": 1771698330716.4465}
+{"sessionId": "22867c", "location": "app.py:generate", "message": "generate received", "data": {"store_len": 1, "order_raw": [0, 1], "order_raw_len": 2}, "timestamp": 1771698332717.266}
+{"sessionId": "22867c", "location": "app.py:generate", "message": "generate validation", "data": {"order": [0, 1], "order_set": [0, 1], "expected_set": [0], "len_ok": false, "set_ok": false}, "timestamp": 1771698332717.266}
+{"sessionId": "22867c", "location": "app.py:generate", "message": "generate invalid image order", "data": {"reason": "set mismatch", "len_ok": false}, "timestamp": 1771698332717.266}
+{"sessionId": "22867c", "location": "app.py:upload", "message": "upload done", "data": {"store_len_after": 1, "thumbnails_ids": [0]}, "timestamp": 1771698529537.46}
+{"sessionId": "22867c", "location": "app.py:generate", "message": "generate received", "data": {"store_len": 1, "order_raw": [0], "order_raw_len": 1}, "timestamp": 1771698530399.4504}
+{"sessionId": "22867c", "location": "app.py:generate", "message": "generate validation", "data": {"order": [0], "order_set": [0], "expected_set": [0], "len_ok": true, "set_ok": true}, "timestamp": 1771698530400.4543}
+{"sessionId": "22867c", "location": "app.py:upload", "message": "upload done", "data": {"store_len_after": 1, "thumbnails_ids": [0]}, "timestamp": 1771698534750.3877}
+{"sessionId": "22867c", "location": "app.py:upload", "message": "upload done", "data": {"store_len_after": 1, "thumbnails_ids": [0]}, "timestamp": 1771698673487.4468}
+{"sessionId": "22867c", "location": "app.py:generate", "message": "generate received", "data": {"store_len": 1, "order_raw": [0], "order_raw_len": 1}, "timestamp": 1771698676336.0078}
+{"sessionId": "22867c", "location": "app.py:generate", "message": "generate validation", "data": {"order": [0], "order_set": [0], "expected_set": [0], "len_ok": true, "set_ok": true}, "timestamp": 1771698676336.0078}
+{"sessionId": "22867c", "location": "app.py:upload", "message": "upload done", "data": {"store_len_after": 1, "thumbnails_ids": [0]}, "timestamp": 1771698682527.3953}
+{"sessionId": "22867c", "location": "app.py:generate", "message": "generate received", "data": {"store_len": 1, "order_raw": [0], "order_raw_len": 1}, "timestamp": 1771698685350.1191}
+{"sessionId": "22867c", "location": "app.py:generate", "message": "generate validation", "data": {"order": [0], "order_set": [0], "expected_set": [0], "len_ok": true, "set_ok": true}, "timestamp": 1771698685350.1191}
+{"sessionId": "22867c", "location": "app.py:upload", "message": "upload done", "data": {"store_len_after": 1, "thumbnails_ids": [0]}, "timestamp": 1771698690301.8118}
+{"sessionId": "22867c", "location": "app.py:upload", "message": "upload done", "data": {"store_len_after": 2, "thumbnails_ids": [1]}, "timestamp": 1771698764818.4827}
+{"sessionId": "22867c", "location": "app.py:upload", "message": "upload done", "data": {"store_len_after": 3, "thumbnails_ids": [2]}, "timestamp": 1771698836486.8684}
+{"sessionId": "22867c", "location": "app.py:upload", "message": "upload done", "data": {"store_len_after": 4, "thumbnails_ids": [3]}, "timestamp": 1771698841970.3853}
+{"sessionId": "22867c", "location": "app.py:upload", "message": "upload done", "data": {"store_len_after": 5, "thumbnails_ids": [4]}, "timestamp": 1771698845467.4976}
+{"sessionId": "22867c", "location": "app.py:upload", "message": "upload done", "data": {"store_len_after": 1, "thumbnails_ids": [0]}, "timestamp": 1771698881255.8477}
+{"sessionId": "22867c", "location": "app.py:generate", "message": "generate received", "data": {"store_len": 1, "order_raw": [0], "order_raw_len": 1}, "timestamp": 1771698882304.5608}
+{"sessionId": "22867c", "location": "app.py:generate", "message": "generate validation", "data": {"order": [0], "order_set": [0], "expected_set": [0], "len_ok": true, "set_ok": true}, "timestamp": 1771698882305.5767}
+{"sessionId": "22867c", "location": "app.py:upload", "message": "upload done", "data": {"store_len_after": 1, "thumbnails_ids": [0]}, "timestamp": 1771698886790.237}
+{"sessionId": "22867c", "location": "app.py:generate", "message": "generate received", "data": {"store_len": 1, "order_raw": [0, 1], "order_raw_len": 2}, "timestamp": 1771698896811.365}
+{"sessionId": "22867c", "location": "app.py:generate", "message": "generate validation", "data": {"order": [0, 1], "order_set": [0, 1], "expected_set": [0], "len_ok": false, "set_ok": false}, "timestamp": 1771698896811.365}
+{"sessionId": "22867c", "location": "app.py:generate", "message": "generate invalid image order", "data": {"reason": "set mismatch", "len_ok": false}, "timestamp": 1771698896811.365}
+{"sessionId": "22867c", "location": "app.py:upload", "message": "upload done", "data": {"store_len_after": 2, "thumbnails_ids": [1]}, "timestamp": 1771699221513.0461}
+{"sessionId": "22867c", "location": "app.py:upload", "message": "upload done", "data": {"store_len_after": 1, "thumbnails_ids": [0]}, "timestamp": 1771699230639.2432}
+{"sessionId": "22867c", "location": "app.py:upload", "message": "upload done", "data": {"store_len_after": 2, "thumbnails_ids": [1]}, "timestamp": 1771699235017.173}
+{"sessionId": "22867c", "location": "app.py:upload", "message": "upload done", "data": {"store_len_after": 3, "thumbnails_ids": [2]}, "timestamp": 1771699255348.4475}
+{"sessionId": "22867c", "location": "app.py:upload", "message": "upload done", "data": {"store_len_after": 4, "thumbnails_ids": [3]}, "timestamp": 1771699260294.3267}
+{"sessionId": "22867c", "location": "app.py:generate", "message": "generate received", "data": {"store_len": 4, "order_raw": [1, 3, 5], "order_raw_len": 3}, "timestamp": 1771699266274.0012}
+{"sessionId": "22867c", "location": "app.py:generate", "message": "generate validation", "data": {"order": [1, 3, 5], "order_set": [1, 3, 5], "expected_set": [0, 1, 2, 3], "len_ok": false, "set_ok": false}, "timestamp": 1771699266274.0012}
+{"sessionId": "22867c", "location": "app.py:generate", "message": "generate invalid image order", "data": {"reason": "set mismatch", "len_ok": false}, "timestamp": 1771699266274.0012}
+{"sessionId": "22867c", "location": "app.py:upload", "message": "upload done", "data": {"store_len_after": 5, "thumbnails_ids": [4]}, "timestamp": 1771699271140.094}
+{"sessionId": "22867c", "location": "app.py:upload", "message": "upload done", "data": {"store_len_after": 6, "thumbnails_ids": [5]}, "timestamp": 1771699278134.6125}
+{"sessionId": "22867c", "location": "app.py:upload", "message": "upload done", "data": {"store_len_after": 7, "thumbnails_ids": [6]}, "timestamp": 1771699284023.2883}
+{"sessionId": "22867c", "location": "app.py:generate", "message": "generate received", "data": {"store_len": 7, "order_raw": [6], "order_raw_len": 1}, "timestamp": 1771699286251.526}
+{"sessionId": "22867c", "location": "app.py:generate", "message": "generate validation", "data": {"order": [6], "order_set": [6], "expected_set": [0, 1, 2, 3, 4, 5, 6], "len_ok": false, "set_ok": false}, "timestamp": 1771699286252.533}
+{"sessionId": "22867c", "location": "app.py:generate", "message": "generate invalid image order", "data": {"reason": "set mismatch", "len_ok": false}, "timestamp": 1771699286252.533}
+{"sessionId": "22867c", "location": "app.py:upload", "message": "upload done", "data": {"store_len_after": 8, "thumbnails_ids": [7]}, "timestamp": 1771699302426.8237}
+{"sessionId": "22867c", "location": "app.py:generate", "message": "generate received", "data": {"store_len": 8, "order_raw": [7], "order_raw_len": 1}, "timestamp": 1771699304026.666}
+{"sessionId": "22867c", "location": "app.py:generate", "message": "generate validation", "data": {"order": [7], "order_set": [7], "expected_set": [0, 1, 2, 3, 4, 5, 6, 7], "len_ok": false, "set_ok": false}, "timestamp": 1771699304026.666}
+{"sessionId": "22867c", "location": "app.py:generate", "message": "generate invalid image order", "data": {"reason": "set mismatch", "len_ok": false}, "timestamp": 1771699304026.666}
