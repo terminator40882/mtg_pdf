@@ -5,27 +5,17 @@
  * Flask app; everything now happens in this tab. State lives only in memory, so a
  * reload starts empty exactly as it did when index() cleared the server store.
  */
-import {
-  CORNER_RADIUS_BASE_MM,
-  DEFAULT_TARGET,
-  PADDING_BASE_MM,
-  TARGET_LINUX,
-  TARGET_WINDOWS,
-  clampCornerDelta,
-  clampPaddingDelta,
-  limitError,
-} from './geometry.js';
+import { DEFAULT_TARGET, TARGET_LINUX, TARGET_WINDOWS, limitError } from './geometry.js';
 import { makeThumbnailDataUrl } from './thumbnail.js';
 import { buildPdf } from './pdf-build.js';
 import { createPreviewGrid } from './preview.js';
 import { LINUX_PRINT_COMMAND } from './print-command.js';
 import { createCopyButton } from './copy-button.js';
+import { createControls } from './controls.js';
 
 /** @type {{filename: string, blob: Blob, size: number, dataUrl: string}[]} */
 const items = [];
 let order = [];
-let paddingDelta = 0;
-let cornerDelta = 0;
 let target = DEFAULT_TARGET;
 /** The single live object URL for the generated PDF, or null. */
 let pdfUrl = null;
@@ -34,8 +24,6 @@ const dropZone = document.getElementById('dropZone');
 const fileInput = document.getElementById('fileInput');
 const messageEl = document.getElementById('message');
 const previewSection = document.getElementById('previewSection');
-const paddingValue = document.getElementById('paddingValue');
-const cornerValue = document.getElementById('cornerValue');
 const generateBtn = document.getElementById('generateBtn');
 const downloadBtn = document.getElementById('downloadBtn');
 const resetBtn = document.getElementById('resetBtn');
@@ -70,27 +58,11 @@ function hideMessage() {
   messageEl.classList.add('hidden');
 }
 
-// --- Padding / corner controls ---
+// --- Numeric controls ---
 
-function updateControlLabels() {
-  paddingValue.textContent = (PADDING_BASE_MM + paddingDelta).toFixed(1);
-  cornerValue.textContent = (CORNER_RADIUS_BASE_MM + cornerDelta).toFixed(1);
-}
-document.getElementById('paddingMinus').addEventListener('click', () => {
-  paddingDelta = clampPaddingDelta(paddingDelta - 0.1);
-  updateControlLabels();
-});
-document.getElementById('paddingPlus').addEventListener('click', () => {
-  paddingDelta += 0.1;
-  updateControlLabels();
-});
-document.getElementById('cornerMinus').addEventListener('click', () => {
-  cornerDelta = clampCornerDelta(cornerDelta - 0.1);
-  updateControlLabels();
-});
-document.getElementById('cornerPlus').addEventListener('click', () => {
-  cornerDelta += 0.1;
-  updateControlLabels();
+const controls = createControls({
+  // A PDF generated before the nudge sits at the old position.
+  onAlignmentChange: () => releasePdf(),
 });
 
 // --- Output target ---
@@ -102,8 +74,10 @@ function updateTargetButton() {
   targetBtn.textContent = `Target: ${TARGET_LABELS[target]}`;
   targetBtn.title = `Click to switch to ${TARGET_LABELS[other]}`;
   targetBtn.dataset.target = target;
-  // The print command is specific to the borderless Linux setup.
-  commandSection.hidden = target !== TARGET_LINUX;
+  // The print command and the alignment nudges are specific to the Linux setup.
+  const linux = target === TARGET_LINUX;
+  commandSection.hidden = !linux;
+  controls.showAlignment(linux);
 }
 targetBtn.addEventListener('click', () => {
   target = target === TARGET_LINUX ? TARGET_WINDOWS : TARGET_LINUX;
@@ -175,7 +149,6 @@ async function addFiles(files) {
   if (items.length) {
     previewSection.style.display = 'block';
     preview.render(items, order);
-    updateControlLabels();
   }
   if (failure) showMessage(failure, 'error');
 }
@@ -224,11 +197,7 @@ generateBtn.addEventListener('click', async () => {
     const { blob, downscaled } = await buildPdf(
       items,
       order,
-      {
-        paddingMm: PADDING_BASE_MM + paddingDelta,
-        cornerMm: CORNER_RADIUS_BASE_MM + cornerDelta,
-        target,
-      },
+      { ...controls.values(), target },
       (done, count) => {
         generateBtn.textContent = `Generating… ${done}/${count}`;
       },
@@ -257,13 +226,10 @@ resetBtn.addEventListener('click', () => {
   releasePdf();
   items.length = 0;
   order = [];
-  paddingDelta = 0;
-  cornerDelta = 0;
+  controls.resetBatch();
   previewSection.style.display = 'none';
   preview.clear();
-  updateControlLabels();
   hideMessage();
 });
 
-updateControlLabels();
 updateTargetButton();

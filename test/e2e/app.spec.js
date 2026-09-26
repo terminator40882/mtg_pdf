@@ -205,16 +205,16 @@ test('defaults to the Linux target and centres the shrunk card', async ({ page }
   await page.setInputFiles('#fileInput', CARD_A);
   const { pdf } = await generateAndRead(page);
 
-  // 88.9mm / (OVERSCAN * 835/818) + 0.6mm tall, width following the cropped image's
+  // 88.9mm / (OVERSCAN * 835/818) + 1.1mm tall, width following the cropped image's
   // aspect ratio, centred horizontally, card centre lifted 1.3mm above the page centre.
   const PT_PER_MM = 72 / 25.4;
   const { width, height, x, y } = imageMatrix(pdf, 0);
-  expect(height / PT_PER_MM).toBeCloseTo(83.2831, 3);
-  expect(width / PT_PER_MM).toBeCloseTo(58.4964, 3);
-  expect(x / PT_PER_MM).toBeCloseTo(15.2018, 3);
-  expect(y / PT_PER_MM).toBeCloseTo(4.1085, 3);
+  expect(height / PT_PER_MM).toBeCloseTo(83.7831, 3);
+  expect(width / PT_PER_MM).toBeCloseTo(58.8476, 3);
+  expect(x / PT_PER_MM).toBeCloseTo(15.0262, 3);
+  expect(y / PT_PER_MM).toBeCloseTo(4.1585, 3);
   expect(x).toBeCloseTo(252 - x - width, 3); // symmetric left/right
-  expect((y + height / 2) / PT_PER_MM).toBeCloseTo(88.9 / 2 + 1.3, 3); // lifted centre
+  expect((y + height / 2) / PT_PER_MM).toBeCloseTo(88.9 / 2 + 1.6, 3); // lifted centre
 
   // 1:1 — the drawn rectangle must match the embedded image's aspect ratio exactly,
   // otherwise the card is stretched.
@@ -324,5 +324,71 @@ test.describe('print command', () => {
     await page.setInputFiles('#fileInput', CARD_A);
     const { download } = await generateAndRead(page);
     expect(LINUX_PRINT_COMMAND).toContain(download.suggestedFilename());
+  });
+});
+
+test.describe('print alignment offsets', () => {
+  const PT_PER_MM = 72 / 25.4;
+
+  const click = async (page, id, times) => {
+    for (let i = 0; i < times; i += 1) await page.click(id);
+  };
+
+  test('are shown on Linux and hidden on Windows', async ({ page }) => {
+    await page.setInputFiles('#fileInput', CARD_A);
+    await expect(page.locator('#offsetXRow')).toBeVisible();
+    await expect(page.locator('#offsetYRow')).toBeVisible();
+    await expect(page.locator('#offsetXValue')).toHaveText('0.0');
+    await expect(page.locator('#offsetYValue')).toHaveText('1.6');
+
+    await page.click('#targetBtn');
+    await expect(page.locator('#offsetXRow')).toBeHidden();
+    await expect(page.locator('#offsetYRow')).toBeHidden();
+  });
+
+  test('move the card in the PDF without resizing it', async ({ page }) => {
+    await page.setInputFiles('#fileInput', CARD_A);
+    const before = imageMatrix((await generateAndRead(page)).pdf, 0);
+
+    await click(page, '#offsetXPlus', 10); // +1.0mm right
+    await click(page, '#offsetYMinus', 4); // -0.4mm, i.e. down
+    await expect(page.locator('#offsetXValue')).toHaveText('1.0');
+    await expect(page.locator('#offsetYValue')).toHaveText('1.2');
+
+    const after = imageMatrix((await generateAndRead(page)).pdf, 0);
+    expect((after.x - before.x) / PT_PER_MM).toBeCloseTo(1.0, 3);
+    expect((after.y - before.y) / PT_PER_MM).toBeCloseTo(-0.4, 3);
+    expect(after.width).toBeCloseTo(before.width, 6);
+    expect(after.height).toBeCloseTo(before.height, 6);
+  });
+
+  test('nudging invalidates an already generated PDF', async ({ page }) => {
+    await page.setInputFiles('#fileInput', CARD_A);
+    await generateAndRead(page);
+    await expect(page.locator('#downloadBtn')).toBeEnabled();
+
+    await page.click('#offsetXPlus');
+    await expect(page.locator('#downloadBtn')).toBeDisabled();
+  });
+
+  test('are capped at 10mm', async ({ page }) => {
+    await page.setInputFiles('#fileInput', CARD_A);
+    await click(page, '#offsetXPlus', 120);
+    await expect(page.locator('#offsetXValue')).toHaveText('10.0');
+    await click(page, '#offsetXMinus', 240);
+    await expect(page.locator('#offsetXValue')).toHaveText('-10.0');
+  });
+
+  test('survive "Generate another", unlike padding', async ({ page }) => {
+    // They calibrate the printer, not the batch.
+    await page.setInputFiles('#fileInput', CARD_A);
+    await click(page, '#offsetXPlus', 3);
+    await click(page, '#paddingPlus', 3);
+    await expect(page.locator('#offsetXValue')).toHaveText('0.3');
+    await expect(page.locator('#paddingValue')).toHaveText('3.1');
+
+    await page.getByRole('button', { name: 'Generate another' }).click();
+    await expect(page.locator('#offsetXValue')).toHaveText('0.3');
+    await expect(page.locator('#paddingValue')).toHaveText('2.8');
   });
 });

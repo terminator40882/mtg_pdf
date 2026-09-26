@@ -9,6 +9,9 @@
   --error: #c75c5c;
 }
 * { box-sizing: border-box; }
+/* .control-row sets display:flex, which would otherwise out-specify the UA's
+   [hidden] { display: none } and leave hidden rows visible. */
+[hidden] { display: none !important; }
 body {
   font-family: system-ui, -apple-system, sans-serif;
   background: var(--bg);

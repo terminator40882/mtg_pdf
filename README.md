@@ -27,8 +27,15 @@ The first Playwright run needs `npx playwright install chromium`.
 
 ## Deploy
 
-`.gitlab-ci.yml` runs both suites and then copies `src/` into `public/` for the `pages`
-job. No build step. The site ends up at `https://<user>.gitlab.io/<project>/`.
+The repository is currently published with **GitHub Pages** from the repo root, so the
+app is served at `<pages-url>/src/`. The `index.html` at the repo root is nothing but a
+redirect to `src/`, so the bare URL works too; `.nojekyll` keeps Pages from running the
+files through Jekyll.
+
+`.gitlab-ci.yml` targets **GitLab** Pages instead: it runs both suites and copies `src/`
+into `public/` for the `pages` job, landing at `https://<user>.gitlab.io/<project>/`.
+GitHub ignores that file — it is only useful once a GitLab remote exists. There is no
+GitHub Actions workflow yet, so the test suites do not run in CI on GitHub.
 
 Because Pages serves the project from a subdirectory, **every path in the page must be
 relative** (`./app.js`, not `/app.js`). There is no service worker, so a deploy can never
@@ -46,9 +53,11 @@ query to the import in `index.html`.
 | `src/image-process.js` | canvas crop + rounded corners → JPEG |
 | `src/thumbnail.js` | 200px preview thumbnails |
 | `src/pdf-build.js` | page layout via pdf-lib |
+| `src/controls.js` | padding, corner radius and alignment offset rows |
 | `src/print-command.js` | the CUPS command shown on the Linux target |
 | `src/copy-button.js` | click-to-copy with a clipboard fallback |
 | `src/vendor/` | pdf-lib browser bundle (committed, so Pages needs no build) |
+| `index.html`, `.nojekyll` | root redirect to `src/` for GitHub Pages |
 | `old/` | the previous Flask + Pillow + fpdf2 version, kept for reference |
 
 To refresh the vendored library after bumping `pdf-lib`: `npm run vendor`.
@@ -65,9 +74,9 @@ real prints:
 - the height starts at `CARD_MM.height` (88.9 mm) shrunk by the Canon G600 overscan
   factor (`OVERSCAN`, 1.0533) so the printer blows it back up,
 - shrunk again by `LINUX_SIZE_CORRECTION` (835/818),
-- then grown by `LINUX_SIZE_BOOST_MM` (0.6 mm),
-- centred horizontally, with the card centre lifted `LINUX_LIFT_MM` (1.3 mm) above the
-  page centre — so the top margin ends up 2.6 mm smaller than the bottom one,
+- then grown by `LINUX_SIZE_BOOST_MM` (1.1 mm),
+- centred horizontally, with the card centre lifted `LINUX_LIFT_MM` (1.6 mm) above the
+  page centre — so the top margin ends up 3.2 mm smaller than the bottom one,
 - and cropped `LINUX_BORDER_MM` (0.7 mm) less than the padding control asks for, which
   leaves that much extra black border on the card.
 
@@ -80,10 +89,10 @@ cropped image's aspect ratio, flush with the top edge.
 
 | | Linux | Windows |
 | --- | --- | --- |
-| image rectangle | 60.134 × 83.283 mm | 63.189 × 88.098 mm |
-| margin left / right | 14.383 / 14.383 mm | 13.163 / 12.548 mm |
-| margin top / bottom | 1.509 / 4.109 mm | 0.000 / 0.802 mm |
-| card centre | 45.750 mm (page centre + 1.3) | 44.851 mm |
+| image rectangle | 60.495 × 83.783 mm | 63.189 × 88.098 mm |
+| margin left / right | 14.202 / 14.202 mm | 13.163 / 12.548 mm |
+| margin top / bottom | 0.959 / 4.159 mm | 0.000 / 0.802 mm |
+| card centre | 46.050 mm (page centre + 1.6) | 44.851 mm |
 | effective crop padding | 2.1 mm | 2.8 mm |
 | distortion | none (1:1) | none (1:1) |
 
@@ -94,6 +103,17 @@ Those are measured off generated PDFs, not computed. The constants live in
 `src/geometry.js` (`OVERSCAN`, `CARD_MM`, `PAGE_MM`); switching the target discards any
 PDF already generated, since it was built for the other layout. The target is a printer
 setting, so "Generate another" leaves it alone.
+
+### Print alignment
+
+On the Linux target two extra control rows appear next to padding and corner radius:
+**X offset** (positive moves the card right) and **Y offset** (positive moves it up,
+shown as the total including the 1.6 mm built-in lift). Both step in 0.1 mm and are
+capped at ±`OFFSET_LIMIT_MM` (10 mm). They shift the card without resizing it.
+
+These calibrate a printer rather than a batch, so "Generate another" keeps them — only
+padding and corner radius reset. They are not persisted across a reload; say so if you
+want that. Nudging discards an already generated PDF, since it sits at the old position.
 
 On the Linux target the page also shows the CUPS command at the bottom; a left click
 copies it, line continuations included. It lives in `src/print-command.js` — the one

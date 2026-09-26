@@ -53,12 +53,14 @@ export const CARD_MM = { width: 63.5, height: 88.9 };
 export const OVERSCAN = 1.0533;
 /** Measured size correction applied on top of OVERSCAN. */
 export const LINUX_SIZE_CORRECTION = 835 / 818;
-/** The card centre sits this far above the page centre. */
-export const LINUX_LIFT_MM = 1.3;
+/** The card centre sits this far above the page centre, before the Y offset. */
+export const LINUX_LIFT_MM = 1.6;
 /** Crop this much less than asked for, so more of the black border survives. */
 export const LINUX_BORDER_MM = 0.7;
 /** Measured height correction, added after the divisors. */
-export const LINUX_SIZE_BOOST_MM = 0.6;
+export const LINUX_SIZE_BOOST_MM = 1.1;
+/** How far the manual print-alignment offsets may be nudged, in mm. */
+export const OFFSET_LIMIT_MM = 10;
 
 /** Drawn card height. Always BASE_HEIGHT_MM, independent of the source image. */
 export function cardHeightInch() {
@@ -119,17 +121,19 @@ export function cornerRadiusPx(imgHeightPx, cornerMm) {
  * image is scaled 1:1 and never distorted - CARD_MM.width is the finished size the
  * scan is meant to have, not a box the image is squeezed into.
  *
- * Horizontally centred; vertically centred and then lifted by LINUX_LIFT_MM.
+ * Horizontally centred; vertically centred and then lifted by LINUX_LIFT_MM. Both are
+ * then nudged by the manual print-alignment offsets: positive x moves right, positive
+ * y moves up.
  */
-export function overscanPlacementPt(croppedW, croppedH) {
+export function overscanPlacementPt(croppedW, croppedH, offsetXMm = 0, offsetYMm = 0) {
   const divisor = OVERSCAN * LINUX_SIZE_CORRECTION;
   const height = (CARD_MM.height / divisor + LINUX_SIZE_BOOST_MM) * PT_PER_MM;
   const width = height * (croppedW / croppedH);
   const page = PAGE_MM * PT_PER_MM;
   return {
-    x: (page - width) / 2,
+    x: (page - width) / 2 + offsetXMm * PT_PER_MM,
     // pdf-lib's y grows upwards, so a positive offset moves the card up.
-    y: (page - height) / 2 + LINUX_LIFT_MM * PT_PER_MM,
+    y: (page - height) / 2 + (LINUX_LIFT_MM + offsetYMm) * PT_PER_MM,
     width,
     height,
   };
@@ -159,11 +163,14 @@ export function effectivePaddingMm(target, paddingMm) {
   return target === TARGET_LINUX ? Math.max(0, paddingMm - LINUX_BORDER_MM) : paddingMm;
 }
 
-/** Rectangle to draw the card into, in points, for the selected target. */
-export function cardPlacementPt(target, croppedW, croppedH) {
-  return target === TARGET_WINDOWS
-    ? aspectPlacementPt(croppedW, croppedH)
-    : overscanPlacementPt(croppedW, croppedH);
+/**
+ * Rectangle to draw the card into, in points, for the selected target.
+ * The manual offsets only apply to the Linux target; Windows stays as fpdf2 had it.
+ */
+export function cardPlacementPt(target, croppedW, croppedH, offsets = {}) {
+  if (target === TARGET_WINDOWS) return aspectPlacementPt(croppedW, croppedH);
+  const { offsetXMm = 0, offsetYMm = 0 } = offsets;
+  return overscanPlacementPt(croppedW, croppedH, offsetXMm, offsetYMm);
 }
 
 /**
@@ -201,6 +208,11 @@ export function limitError(currentCount, currentBytes, addedCount, addedBytes) {
 /** Padding may not go below 0mm: negative padding makes Pillow/canvas grow the frame. */
 export function clampPaddingDelta(delta) {
   return Math.max(-PADDING_BASE_MM, delta);
+}
+
+/** Print-alignment offsets are capped at OFFSET_LIMIT_MM either way. */
+export function clampOffsetMm(offsetMm) {
+  return Math.min(OFFSET_LIMIT_MM, Math.max(-OFFSET_LIMIT_MM, offsetMm));
 }
 
 /** Corner radius may not go below 0mm (index.html clamped the delta at -2). */

@@ -21,7 +21,7 @@ import { renderCardJpeg } from './image-process.js';
 export async function buildPdf(
   items,
   order,
-  { paddingMm, cornerMm, target = DEFAULT_TARGET },
+  { paddingMm, cornerMm, target = DEFAULT_TARGET, offsetXMm = 0, offsetYMm = 0 },
   onProgress = () => {},
 ) {
   if (!order.length) throw new Error('No images uploaded');
@@ -41,7 +41,10 @@ export async function buildPdf(
         if (card.scaled) downscaled += 1;
         const image = await pdf.embedJpg(new Uint8Array(await card.blob.arrayBuffer()));
         const page = pdf.addPage([PAGE_SIZE_PT, PAGE_SIZE_PT]);
-        page.drawImage(image, cardPlacementPt(target, card.width, card.height));
+        page.drawImage(
+          image,
+          cardPlacementPt(target, card.width, card.height, { offsetXMm, offsetYMm }),
+        );
       } catch (err) {
         throw new Error(`Invalid image '${item.filename}': ${err.message}`);
       } finally {

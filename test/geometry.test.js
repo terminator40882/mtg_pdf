@@ -20,6 +20,7 @@ import {
   LINUX_LIFT_MM,
   LINUX_SIZE_BOOST_MM,
   LINUX_SIZE_CORRECTION,
+  OFFSET_LIMIT_MM,
   OVERSCAN,
   PAGE_MM,
   PT_PER_MM,
@@ -38,6 +39,7 @@ import {
   cardHeightInch,
   cardWidthInch,
   clampCornerDelta,
+  clampOffsetMm,
   clampPaddingDelta,
   cornerRadiusPx,
   cropRect,
@@ -242,16 +244,16 @@ describe('output targets', () => {
       const { height } = overscanPlacementPt(LINUX_W, LINUX_H);
       const divisor = OVERSCAN * LINUX_SIZE_CORRECTION;
       expect(LINUX_SIZE_CORRECTION).toBeCloseTo(835 / 818, 12);
-      expect(LINUX_SIZE_BOOST_MM).toBe(0.6);
+      expect(LINUX_SIZE_BOOST_MM).toBe(1.1);
       expect(mm(height)).toBeCloseTo(CARD_MM.height / divisor + LINUX_SIZE_BOOST_MM, 9);
-      expect(mm(height)).toBeCloseTo(83.2831, 3);
+      expect(mm(height)).toBeCloseTo(83.7831, 3);
     });
 
     it('is exactly 0.6mm taller than it would be without the boost', () => {
       const { height } = overscanPlacementPt(LINUX_W, LINUX_H);
       const divisor = OVERSCAN * LINUX_SIZE_CORRECTION;
       expect(mm(height) - CARD_MM.height / divisor).toBeCloseTo(LINUX_SIZE_BOOST_MM, 9);
-      expect(mm(height)).toBeCloseTo(82.6831 + 0.6, 3);
+      expect(mm(height)).toBeCloseTo(82.6831 + 1.1, 3);
     });
 
     it('scales 1:1 — the rectangle keeps the source aspect ratio', () => {
@@ -271,16 +273,16 @@ describe('output targets', () => {
     it('centres horizontally and lifts the centre by 1.3mm', () => {
       const { x, y, width, height } = overscanPlacementPt(LINUX_W, LINUX_H);
       const page = PAGE_MM * PT_PER_MM;
-      expect(LINUX_LIFT_MM).toBe(1.3);
+      expect(LINUX_LIFT_MM).toBe(1.6);
       // Left margin equals right margin.
       expect(x).toBeCloseTo(page - x - width, 9);
-      expect(mm(x)).toBeCloseTo(14.3829, 3);
+      expect(mm(x)).toBeCloseTo(14.2024, 3);
       // Vertically the card centre sits 1.3mm above the page centre.
       expect(mm(y + height / 2)).toBeCloseTo(PAGE_MM / 2 + LINUX_LIFT_MM, 9);
-      expect(mm(y + height / 2)).toBeCloseTo(45.75, 6);
+      expect(mm(y + height / 2)).toBeCloseTo(46.05, 6);
       // So the top margin is 2.6mm smaller than the bottom one.
-      expect(mm(page - y - height)).toBeCloseTo(1.5085, 3);
-      expect(mm(y)).toBeCloseTo(4.1085, 3);
+      expect(mm(page - y - height)).toBeCloseTo(0.9585, 3);
+      expect(mm(y)).toBeCloseTo(4.1585, 3);
       expect(mm(y) - mm(page - y - height)).toBeCloseTo(2 * LINUX_LIFT_MM, 9);
     });
 
@@ -357,5 +359,62 @@ describe('effectivePaddingMm', () => {
     expect(linux.sw).toBeGreaterThan(asked.sw);
     expect(linux.sh).toBeGreaterThan(asked.sh);
     expect(linux.sx).toBeLessThan(asked.sx);
+  });
+});
+
+describe('print-alignment offsets', () => {
+  const W = 2047;
+  const H = 2835;
+  const mm = (pt) => pt / PT_PER_MM;
+
+  it('defaults to no nudge at all', () => {
+    expect(overscanPlacementPt(W, H, 0, 0)).toEqual(overscanPlacementPt(W, H));
+  });
+
+  it('moves the card right for a positive x and up for a positive y', () => {
+    const base = overscanPlacementPt(W, H);
+    const moved = overscanPlacementPt(W, H, 1.5, 0.4);
+    expect(mm(moved.x - base.x)).toBeCloseTo(1.5, 9);
+    // pdf-lib's y grows upwards, so a positive y offset raises the card.
+    expect(mm(moved.y - base.y)).toBeCloseTo(0.4, 9);
+  });
+
+  it('moves the card left and down for negative offsets', () => {
+    const base = overscanPlacementPt(W, H);
+    const moved = overscanPlacementPt(W, H, -2, -0.5);
+    expect(mm(moved.x - base.x)).toBeCloseTo(-2, 9);
+    expect(mm(moved.y - base.y)).toBeCloseTo(-0.5, 9);
+  });
+
+  it('never changes the size, only the position', () => {
+    const base = overscanPlacementPt(W, H);
+    const moved = overscanPlacementPt(W, H, 3, -3);
+    expect(moved.width).toBe(base.width);
+    expect(moved.height).toBe(base.height);
+  });
+
+  it('stacks the y offset on top of the built-in lift', () => {
+    const { y, height } = overscanPlacementPt(W, H, 0, 0.5);
+    expect(mm(y + height / 2)).toBeCloseTo(PAGE_MM / 2 + LINUX_LIFT_MM + 0.5, 9);
+  });
+
+  it('reaches the Linux target through cardPlacementPt', () => {
+    expect(cardPlacementPt(TARGET_LINUX, W, H, { offsetXMm: 1, offsetYMm: 2 })).toEqual(
+      overscanPlacementPt(W, H, 1, 2),
+    );
+  });
+
+  it('leaves the Windows target untouched', () => {
+    const plain = cardPlacementPt(TARGET_WINDOWS, W, H);
+    const nudged = cardPlacementPt(TARGET_WINDOWS, W, H, { offsetXMm: 5, offsetYMm: 5 });
+    expect(nudged).toEqual(plain);
+  });
+
+  it('caps the nudge at OFFSET_LIMIT_MM in both directions', () => {
+    expect(OFFSET_LIMIT_MM).toBe(10);
+    expect(clampOffsetMm(0)).toBe(0);
+    expect(clampOffsetMm(3.4)).toBeCloseTo(3.4, 9);
+    expect(clampOffsetMm(50)).toBe(OFFSET_LIMIT_MM);
+    expect(clampOffsetMm(-50)).toBe(-OFFSET_LIMIT_MM);
   });
 });
