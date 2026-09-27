@@ -8,7 +8,7 @@ import { readFile } from 'node:fs/promises';
 import { expect, test } from '@playwright/test';
 import { PDFDocument, PDFName } from 'pdf-lib';
 import { imageMatrix } from '../helpers/pdf-matrix.js';
-import { LINUX_PRINT_COMMAND } from '../../src/print-command.js';
+import { LINUX_PRINT_COMMAND, NEWEST_DOWNLOAD } from '../../src/print-command.js';
 import {
   PADDING_BASE_MM,
   TARGET_LINUX,
@@ -307,7 +307,7 @@ test.describe('print command', () => {
     // The line continuations have to survive, or the paste breaks in a shell.
     expect(clipboard.split('\n')).toHaveLength(6);
     expect(clipboard).toContain('-o PageSize=89x89mm.Borderless');
-    expect(clipboard.trimEnd().endsWith('mtg_cards.pdf')).toBe(true);
+    expect(clipboard.trimEnd().endsWith(NEWEST_DOWNLOAD)).toBe(true);
 
     await expect(page.locator('#commandHint')).toHaveText('Copied');
     await expect(page.locator('#commandBtn')).toHaveClass(/copied/);
@@ -320,10 +320,13 @@ test.describe('print command', () => {
     await expect(page.locator('#commandBtn')).not.toHaveClass(/copied/);
   });
 
-  test('the command names the file the browser actually downloads', async ({ page }) => {
+  test('the command\'s glob covers the name the browser actually downloads', async ({ page }) => {
     await page.setInputFiles('#fileInput', CARD_A);
     const { download } = await generateAndRead(page);
-    expect(LINUX_PRINT_COMMAND).toContain(download.suggestedFilename());
+    // The browser may append -1, -2, ... on repeat downloads, which the glob absorbs.
+    // test/print-command.test.js runs the substitution itself against such names.
+    expect(download.suggestedFilename()).toMatch(/^mtg_cards.*\.pdf$/);
+    expect(LINUX_PRINT_COMMAND).toContain('mtg_cards*.pdf');
   });
 });
 
@@ -392,4 +395,95 @@ test.describe('print alignment offsets', () => {
     await expect(page.locator('#offsetXValue')).toHaveText('0.6');
     await expect(page.locator('#paddingValue')).toHaveText('2.8');
   });
+});
+
+test.describe('removing cards from the preview', () => {
+  const names = (page) => page.locator('.preview-item .name');
+
+  test('drops one card and renumbers the rest', async ({ page }) => {
+    await page.setInputFiles('#fileInput', [CARD_A, CARD_B, CARD_A]);
+    await expect(page.locator('.preview-item')).toHaveCount(3);
+
+    await page.locator('.preview-item').nth(1).locator('.remove').click();
+
+    await expect(page.locator('.preview-item')).toHaveCount(2);
+    await expect(names(page)).toHaveText(['card-a.png', 'card-a.png']);
+    await expect(page.locator('.preview-item .num')).toHaveText(['1', '2']);
+  });
+
+  test('leaves the remaining cards in the PDF, in order', async ({ page }) => {
+    await page.setInputFiles('#fileInput', [CARD_A, CARD_B]);
+    await page.locator('.preview-item').first().locator('.remove').click();
+    await expect(names(page)).toHaveText(['card-b.jpg']);
+
+    const { pdf } = await generateAndRead(page);
+    expect(pdf.getPageCount()).toBe(1);
+  });
+
+  test('keeps working after a reorder', async ({ page }) => {
+    await page.setInputFiles('#fileInput', [CARD_A, CARD_B]);
+    await page.locator('.preview-item').nth(1).dragTo(page.locator('.preview-item').nth(0));
+    await expect(names(page)).toHaveText(['card-b.jpg', 'card-a.png']);
+
+    await page.locator('.preview-item').first().locator('.remove').click();
+    await expect(names(page)).toHaveText(['card-a.png']);
+    expect((await generateAndRead(page)).pdf.getPageCount()).toBe(1);
+  });
+
+  test('hides the preview once the last card is gone', async ({ page }) => {
+    await page.setInputFiles('#fileInput', CARD_A);
+    await page.locator('.preview-item').first().locator('.remove').click();
+
+    await expect(page.locator('#previewSection')).toBeHidden();
+    await expect(page.locator('.preview-item')).toHaveCount(0);
+
+    // Adding a file afterwards must bring the list back.
+    await page.setInputFiles('#fileInput', CARD_B);
+    await expect(page.locator('.preview-item')).toHaveCount(1);
+    await expect(names(page)).toHaveText(['card-b.jpg']);
+  });
+
+  test('does not open the lightbox', async ({ page }) => {
+    await page.setInputFiles('#fileInput', [CARD_A, CARD_B]);
+    await page.locator('.preview-item').first().locator('.remove').click();
+    await expect(page.locator('#lightbox')).not.toHaveClass(/show/);
+  });
+
+  test('invalidates an already generated PDF', async ({ page }) => {
+    await page.setInputFiles('#fileInput', [CARD_A, CARD_B]);
+    await generateAndRead(page);
+    await expect(page.locator('#downloadBtn')).toBeEnabled();
+
+    await page.locator('.preview-item').first().locator('.remove').click();
+    await expect(page.locator('#downloadBtn')).toBeDisabled();
+
+    expect((await generateAndRead(page)).pdf.getPageCount()).toBe(1);
+  });
+
+  test('frees the slot against the image limit', async ({ page }) => {
+    await page.setInputFiles('#fileInput', [CARD_A, CARD_B]);
+    await page.locator('.preview-item').first().locator('.remove').click();
+    // The removed card must not keep counting towards MAX_IMAGES / the byte budget.
+    await page.setInputFiles('#fileInput', CARD_A);
+    await expect(page.locator('.preview-item')).toHaveCount(2);
+    await expect(page.locator('#message')).toHaveClass(/hidden/);
+  });
+});
+
+test('renders a filename containing quotes literally', async ({ page }) => {
+  // Filenames come off the user's disk; they must never be parsed as markup.
+  const hostile = 'a" onmouseover="document.title=\'pwned\'" b.png';
+  await page.setInputFiles('#fileInput', {
+    name: hostile,
+    mimeType: 'image/png',
+    buffer: await readFile(CARD_A),
+  });
+
+  const name = page.locator('.preview-item .name');
+  await expect(name).toHaveText(hostile);
+  // The whole filename must survive inside the attribute, not just the part before
+  // the first quote, and no part of it may become an event handler.
+  await expect(name).toHaveAttribute('title', hostile);
+  await name.hover();
+  expect(await page.title()).toBe('MTG Card PDF');
 });

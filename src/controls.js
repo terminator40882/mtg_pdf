@@ -20,10 +20,10 @@ const STEP = 0.1;
 const el = (id) => document.getElementById(id);
 
 /**
- * @param {{onAlignmentChange?: () => void}} handlers called when an offset moves, so a
- *   PDF built at the old position can be discarded.
+ * @param {{onChange?: () => void}} handlers called whenever a value moves, so a PDF
+ *   built with the old settings can be discarded.
  */
-export function createControls({ onAlignmentChange = () => {} } = {}) {
+export function createControls({ onChange = () => {} } = {}) {
   let paddingDelta = 0;
   let cornerDelta = 0;
   let offsetXDelta = 0;
@@ -43,11 +43,11 @@ export function createControls({ onAlignmentChange = () => {} } = {}) {
     offsetYValue.textContent = (LINUX_LIFT_MM + offsetYDelta).toFixed(1);
   }
 
-  function bind(id, apply, alignment = false) {
+  function bind(id, apply) {
     el(id).addEventListener('click', () => {
       apply();
       render();
-      if (alignment) onAlignmentChange();
+      onChange();
     });
   }
 
@@ -56,10 +56,10 @@ export function createControls({ onAlignmentChange = () => {} } = {}) {
   bind('cornerMinus', () => { cornerDelta = clampCornerDelta(cornerDelta - STEP); });
   bind('cornerPlus', () => { cornerDelta += STEP; });
   // Positive x moves the card right, positive y moves it up.
-  bind('offsetXMinus', () => { offsetXDelta = clampOffsetMm(offsetXDelta - STEP); }, true);
-  bind('offsetXPlus', () => { offsetXDelta = clampOffsetMm(offsetXDelta + STEP); }, true);
-  bind('offsetYMinus', () => { offsetYDelta = clampOffsetMm(offsetYDelta - STEP); }, true);
-  bind('offsetYPlus', () => { offsetYDelta = clampOffsetMm(offsetYDelta + STEP); }, true);
+  bind('offsetXMinus', () => { offsetXDelta = clampOffsetMm(offsetXDelta - STEP); });
+  bind('offsetXPlus', () => { offsetXDelta = clampOffsetMm(offsetXDelta + STEP); });
+  bind('offsetYMinus', () => { offsetYDelta = clampOffsetMm(offsetYDelta - STEP); });
+  bind('offsetYPlus', () => { offsetYDelta = clampOffsetMm(offsetYDelta + STEP); });
 
   render();
 

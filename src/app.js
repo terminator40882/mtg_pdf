@@ -13,8 +13,13 @@ import { LINUX_PRINT_COMMAND } from './print-command.js';
 import { createCopyButton } from './copy-button.js';
 import { createControls } from './controls.js';
 
-/** @type {{filename: string, blob: Blob, size: number, dataUrl: string}[]} */
+/**
+ * Sparse id -> item store. Ids never shift, so `order` can hold them safely; a removed
+ * slot is nulled out to let its blob and thumbnail be collected.
+ * @type {({filename: string, blob: Blob, size: number, dataUrl: string} | null)[]}
+ */
 const items = [];
+/** Ids of the cards to render, in order. The source of truth for what is included. */
 let order = [];
 let target = DEFAULT_TARGET;
 /** The single live object URL for the generated PDF, or null. */
@@ -42,12 +47,34 @@ const preview = createPreviewGrid(document.getElementById('previewGrid'), {
   onReorder: (next) => {
     order = next;
     preview.render(items, order);
+    releasePdf();
   },
+  onRemove: (id) => removeItem(id),
   onZoom: (item) => {
     lightboxImg.src = item.dataUrl;
     lightbox.classList.add('show');
   },
 });
+
+/** Total bytes of the cards still in the list. */
+function liveBytes() {
+  return order.reduce((sum, id) => sum + items[id].size, 0);
+}
+
+/** Drop one card and free what it held. */
+function removeItem(id) {
+  const at = order.indexOf(id);
+  if (at === -1) return;
+  order.splice(at, 1);
+  items[id] = null;
+  releasePdf();
+  if (order.length) {
+    preview.render(items, order);
+  } else {
+    previewSection.style.display = 'none';
+    preview.clear();
+  }
+}
 
 function showMessage(text, type) {
   messageEl.textContent = text;
@@ -61,8 +88,8 @@ function hideMessage() {
 // --- Numeric controls ---
 
 const controls = createControls({
-  // A PDF generated before the nudge sits at the old position.
-  onAlignmentChange: () => releasePdf(),
+  // A PDF generated before the change no longer matches what the controls say.
+  onChange: () => releasePdf(),
 });
 
 // --- Output target ---
@@ -108,8 +135,8 @@ async function addFiles(files) {
   hideMessage();
 
   const rejected = limitError(
-    items.length,
-    items.reduce((sum, i) => sum + i.size, 0),
+    order.length,
+    liveBytes(),
     selected.length,
     selected.reduce((sum, f) => sum + f.size, 0),
   );
@@ -146,9 +173,10 @@ async function addFiles(files) {
     }
   }
 
-  if (items.length) {
+  if (order.length) {
     previewSection.style.display = 'block';
     preview.render(items, order);
+    releasePdf();
   }
   if (failure) showMessage(failure, 'error');
 }
@@ -185,7 +213,7 @@ function triggerDownload() {
 }
 
 generateBtn.addEventListener('click', async () => {
-  if (!items.length) return;
+  if (!order.length) return;
   hideMessage();
   generateBtn.disabled = true;
   // Revoke the previous URL here rather than after the click that used it: revoking

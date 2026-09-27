@@ -1,7 +1,7 @@
 # MTG Card PDF
 
-Upload card images, adjust crop and corner rounding, reorder by dragging, and get a PDF
-with one 3.5" × 3.5" page per card.
+Upload card images, adjust crop and corner rounding, reorder by dragging, drop the ones
+you do not want with the × button, and get a PDF with one 3.5" × 3.5" page per card.
 
 Everything runs in the browser: the images are never uploaded anywhere. The site is
 static files, deployed to GitLab Pages.
@@ -62,6 +62,10 @@ query to the import in `index.html`.
 
 To refresh the vendored library after bumping `pdf-lib`: `npm run vendor`.
 
+Any change to the list or the controls — adding, removing, reordering, padding, corner
+radius, offsets, target — discards an already generated PDF and disables the download
+button, so "Download PDF" can never hand out a file that no longer matches the screen.
+
 ## Output targets
 
 The button at the top of the page picks the page layout. The page is 88.9 × 88.9 mm
@@ -120,9 +124,18 @@ want that. Nudging discards an already generated PDF, since it sits at the old p
 
 On the Linux target the page also shows the CUPS command at the bottom; a left click
 copies it, line continuations included. It lives in `src/print-command.js` — the one
-place to edit when the queue name or its options change. The path is hard-coded as
-`~/Downloads/mtg_cards.pdf`: the browser always names the download `mtg_cards.pdf`, so
-only the directory needs adjusting if it saves somewhere else.
+place to edit when the queue name, its options, or the download directory change.
+
+The command names no file. The browser appends `-1`, `-2`, … to a download whose name is
+already taken, and the page cannot learn the name it actually used, so a hard-coded
+`mtg_cards.pdf` would point at the first download forever. Instead it ends with
+
+```sh
+"$(ls -t ~/Downloads/mtg_cards*.pdf | head -1)"
+```
+
+which picks the most recent matching download. `test/print-command.test.js` runs that
+expression in a real shell against fixtures named the way the browser names them.
 
 Note that the padding control still shows the value you set (2.8 by default); the 0.7 mm
 Linux reduction is applied on top of it when the PDF is built.
